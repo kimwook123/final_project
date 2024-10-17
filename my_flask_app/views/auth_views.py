@@ -2,7 +2,7 @@ from flask import Blueprint, url_for, render_template, flash, request, session, 
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import redirect
 
-from main_web_site.my_flask_app import db
+from .. import db
 from my_flask_app.forms import UserCreateForm, UserLoginForm
 from my_flask_app.models import User
 
