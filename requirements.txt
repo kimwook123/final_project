@@ -3,3 +3,4 @@ flask-migrate
 flask-wtf
 email_validator
 flask-markdown
+langchain-openai
