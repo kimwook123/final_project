@@ -41,6 +41,15 @@ class ChatModel:
         self.tools = [self.tool]
         self.tool_node = ToolNode(tools=self.tools)
         self.chat_model_with_tools = self.chat_model.bind_tools(self.tools)
+        self.graph_builder = StateGraph(MessagesState)
+        self.graph_builder.add_node('model', self._call_model)
+        self.graph_builder.add_node('tools', self.tool_node)
+        self.graph_builder.set_entry_point('model')
+        self.graph_builder.add_conditional_edges(
+            'model',
+            tools_condition
+        )
+        self.graph_builder.add_edge('tools', 'model')
         self.memory = MemorySaver()
         self.graph = self.graph_builder.compile(checkpointer=self.memory)
         self.config = {'configurable': {'thread_id': '1'}}
@@ -50,15 +59,18 @@ class ChatModel:
 
     def get_response(self, prompt: str):
         """모델에 대한 요청을 보내고 응답을 받는다."""
-        for chunk, metadata in self.graph.stream(
-                {'messages':prompt},
-                config=self.config,
-                stream_mode='messages'
-            ):
-            print(chunk)
-            if isinstance(chunk, AIMessage):
-                if isinstance(chunk.content, str):
-                    yield chunk.content
-                elif len(chunk.content) > 0 and \
-                    chunk.content[0]['type'] == 'text':
-                    yield chunk.content[0]['text']
+        try:
+            response = self.graph.invoke(
+                {'messages': prompt},
+                config=self.config
+            )
+
+            for message in response['messages']:
+                if isinstance(message, AIMessage):
+                    if isinstance(message.content, str):
+                        yield message.content
+                    elif len(message.content) > 0 and message.content[0]['type'] == 'text':
+                        yield message.content[0]['text']
+        except Exception as e:
+            print(f"Error invoking the model: {str(e)}")
+            yield f"Error: {str(e)}"
