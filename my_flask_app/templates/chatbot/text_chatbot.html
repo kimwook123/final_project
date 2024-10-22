@@ -3,7 +3,7 @@
 <div class="container mt-5">
     <h2 class="text-center">챗봇과의 대화</h2>
     <div class="chat-container" id="chatContainer">
-        <!-- 채팅 메시지 표시? -->
+        <!-- 채팅 메시지 표시 -->
     </div>
     <div class="input-group mt-3">
         <input type="text" class="form-control" id="userInput" placeholder="메시지를 입력하세요.">
@@ -18,7 +18,8 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    document.getElementById('sendButton').addEventListener('click', async function() {
+    // 메시지 전송 함수
+    async function sendMessage() {
         const userInput = document.getElementById('userInput').value;
         if (!userInput) return;
 
@@ -33,7 +34,7 @@
             const response = await axios.post('http://localhost:5000/chatbot/chat', {
                 message: userInput
             });
-            
+
             // 챗봇의 응답을 채팅 창에 추가
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message bot-message';
@@ -47,6 +48,17 @@
         document.getElementById('userInput').value = '';
         // 스크롤을 아래로 자동으로 이동
         document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
+    }
+
+    // '전송' 버튼 클릭 이벤트 리스너
+    document.getElementById('sendButton').addEventListener('click', sendMessage);
+
+    // 엔터 키 입력 이벤트 리스너
+    document.getElementById('userInput').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // 기본 엔터 동작을 막음
+            sendMessage(); // 메시지 전송 함수 호출
+        }
     });
 </script>
 {% endblock %}
