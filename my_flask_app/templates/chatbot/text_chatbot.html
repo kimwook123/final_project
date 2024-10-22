@@ -18,35 +18,40 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    document.getElementById('sendButton').addEventListener('click', async function() {
-        const userInput = document.getElementById('userInput').value;
-        if (!userInput) return;
+document.getElementById('sendButton').addEventListener('click', async function() {
+    const userInput = document.getElementById('userInput').value;
+    if (!userInput) return;
 
-        // 사용자의 메시지를 채팅 창에 추가
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'message user-message';
-        userMessageDiv.textContent = userInput;
-        document.getElementById('chatContainer').appendChild(userMessageDiv);
+    // 사용자의 메시지를 채팅 창에 추가 (HUMANMESSAGE)
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.className = 'message user-message';
+    userMessageDiv.textContent = userInput;
+    document.getElementById('chatContainer').appendChild(userMessageDiv);
 
-        // 서버에 메시지 전송
-        try {
-            const response = await axios.post('http://localhost:5000/chatbot/chat', {
-                message: userInput
-            });
-            
-            // 챗봇의 응답을 채팅 창에 추가
-            const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message bot-message';
-            botMessageDiv.textContent = response.data.response;
-            document.getElementById('chatContainer').appendChild(botMessageDiv);
-        } catch (error) {
-            console.error('서버와의 통신 오류:', error);
-        }
+    // 서버에 메시지 전송
+    try {
+        const response = await axios.post('/chatbot/chat', {
+            message: userInput
+        });
 
-        // 입력 필드 초기화
-        document.getElementById('userInput').value = '';
-        // 스크롤을 아래로 자동으로 이동
-        document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
-    });
+        // 챗봇의 응답을 채팅 창에 추가 (AIMESSAGE)
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'message bot-message';
+        botMessageDiv.textContent = response.data.response;
+        document.getElementById('chatContainer').appendChild(botMessageDiv);
+    } catch (error) {
+        console.error('서버와의 통신 오류:', error);
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'message bot-message';
+        botMessageDiv.textContent = '서버와의 통신 오류가 발생했습니다.';
+        document.getElementById('chatContainer').appendChild(botMessageDiv);
+    }
+
+    // 입력 필드 초기화
+    document.getElementById('userInput').value = '';
+    // 스크롤을 아래로 자동으로 이동
+    document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
+});
+
 </script>
 {% endblock %}
