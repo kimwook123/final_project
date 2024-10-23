@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">이미지 생성</h2>
+    <div class="chat-container" id="chatContainer">
+        <!-- 채팅 메시지 표시 -->
+    </div>
+    <div class="input-group mt-3">
+        <input type="text" class="form-control" id="userInput" placeholder="이미지 컨셉을 알려주세요.">
+        <div class="input-group-append">
+            <button class="btn btn-primary" id="sendButton">제출</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    // 메시지 전송 함수
+    async function sendMessage() {
+        const userInput = document.getElementById('userInput').value;
+        if (!userInput) return;
+
+        // 사용자의 메시지를 채팅 창에 추가
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'message user-message';
+        userMessageDiv.textContent = userInput;
+        document.getElementById('chatContainer').appendChild(userMessageDiv);
+
+        // 서버에 메시지 전송
+        try {
+            const response = await axios.post('http://localhost:5000/chatbot/chat', {
+                message: userInput
+            });
+
+            // 챗봇의 응답을 채팅 창에 추가
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.textContent = response.data.response;
+            document.getElementById('chatContainer').appendChild(botMessageDiv);
+        } catch (error) {
+            console.error('서버와의 통신 오류:', error);
+        }
+
+        // 입력 필드 초기화
+        document.getElementById('userInput').value = '';
+        // 스크롤을 아래로 자동으로 이동
+        document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
+    }
+
+    // '전송' 버튼 클릭 이벤트 리스너
+    document.getElementById('sendButton').addEventListener('click', sendMessage);
+
+    // 엔터 키 입력 이벤트 리스너
+    document.getElementById('userInput').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // 기본 엔터 동작을 막음
+            sendMessage(); // 메시지 전송 함수 호출
+        }
+    });
+</script>
+{% endblock %}
