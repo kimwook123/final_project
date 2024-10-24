@@ -29,9 +29,13 @@
         userMessageDiv.textContent = userInput;
         document.getElementById('chatContainer').appendChild(userMessageDiv);
 
+        // 입력 필드를 초기화하고 플레이스홀더를 '로딩 중...'으로 변경
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
+
         // 서버에 메시지 전송
         try {
-            const response = await axios.post('http://localhost:5000/chatbot/chat', {
+            const response = await axios.post('/chatbot/chat', {
                 message: userInput
             });
 
@@ -40,12 +44,15 @@
             botMessageDiv.className = 'message bot-message';
             botMessageDiv.textContent = response.data.response;
             document.getElementById('chatContainer').appendChild(botMessageDiv);
+
+            // 응답 후 플레이스홀더 복원
+            document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
+
         } catch (error) {
             console.error('서버와의 통신 오류:', error);
+            document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
         }
 
-        // 입력 필드 초기화
-        document.getElementById('userInput').value = '';
         // 스크롤을 아래로 자동으로 이동
         document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
     }
