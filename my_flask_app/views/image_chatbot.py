@@ -1,23 +1,19 @@
-# 아직 미구현
-# 이미지 챗봇의 메커니즘은 요청 메뉴얼을 제작하여 AI에게 제공하면,
-# AI가 짜여진 프롬프트 메뉴얼에 따라 이미지를 생성하되,
-# Tavily 서칭을 활용한 구글링을 통해 최신 트렌드 키워드를 탐색하고,
-# 사용자가 제시한 키워드와 트렌드 키워드를 병합하여 이미지를 생성한다.
-# 따라서 구글링 후 생성 메커니즘이 텍스트 챗봇 작동방식과 비슷하다.
-
 from datetime import datetime
 from flask import Blueprint, url_for, request, render_template, g, flash, jsonify
 from werkzeug.utils import redirect
-from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.prompts import PromptTemplate
 import os
 from dotenv import load_dotenv
+from openai import OpenAI
+import requests
 
-load_dotenv()
+load_dotenv()  # .env에 작성한 변수를 불러온다.
 
 bp = Blueprint('image', __name__, url_prefix='/imagebot')
 
@@ -32,50 +28,56 @@ def image_initialize():
         model = ImageChatModel(model_id=model_id)
         user_input = request.json.get('message')
         response = model.get_response(user_input)
-
-        return jsonify({'response': list(response)})
+        return jsonify({'response': response})
     
     except Exception as e:
         print(str(e))
         return jsonify({'error': str(e)}), 500
-    
+
 class ImageChatModel:
     def __init__(self, model_id):
-        api_key = os.getenv('OPENAI_API_KEY')
-        self.imagechat_model = ChatOpenAI(model=model_id)
-        self.tool = TavilySearchResults(max_results=3)
-        self.tools = [self.tool]
-        self.tool_node = ToolNode(tools=self.tools)
-        self.imagechat_model_with_tools = self.imagechat_model.bind_tools(self.tools)
         self.graph_builder = StateGraph(MessagesState)
         self.graph_builder.add_node('model', self._call_model)
-        self.graph_builder.add_node('tools', self.tool_node)
         self.graph_builder.set_entry_point('model')
-        self.graph_builder.add_conditional_edges(
-            'model',
-            tools_condition
-        )
-        self.graph_builder.add_edge('tools', 'model')
         self.memory = MemorySaver()
         self.graph = self.graph_builder.compile(checkpointer=self.memory)
         self.config = {'configurable': {'thread_id': '1'}}
+        
+        # TavilySearch 설정
+        self.search_tool = TavilySearchResults(max_results=3)
+        
+        # OpenAI 클라이언트 설정
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def _call_model(self, state: MessagesState):
-        return {'messages': self.imagechat_model_with_tools.invoke(state['messages'])}
-    
+        # TavilySearch를 이용해 최신 트렌드 검색
+        search_results = self.search_tool.invoke("latest marketing trends")
+        trends = [result.get("title", "No Title") for result in search_results]
+
+        # 사용자 메시지와 최신 트렌드 결합
+        user_message = state['messages'][0].content
+        prompt_with_trends = f"{user_message}. 최신 트렌드: {', '.join(trends)}."
+
+        # DALL-E 모델에 프롬프트 전달
+        response = self.client.images.generate(
+            model="dall-e-3",
+            prompt=prompt_with_trends,
+            size="1024x1024"
+        )
+        return {'messages': response.data[0].url}
+
     def get_response(self, prompt: str):
         try:
-            response = self.graph.invoke(
-                {'messages': prompt},
-                config=self.config
-            )
-
+            response = self.graph.invoke({'messages': prompt}, config=self.config)
             for message in response['messages']:
                 if isinstance(message, AIMessage):
                     if isinstance(message.content, str):
-                        yield message.content
-                    elif len(message.content) > 0 and message.content[0]['type'] == 'text':
-                        yield message.content[0]['text']
+                        return message.content
+                elif self.is_image_result(message):
+                    return message.content
         except Exception as e:
             print(f"Error invoking the model: {str(e)}")
-            yield f"Error: {str(e)}"
+            return f"Error: {str(e)}"
+
+    def is_image_result(self, message):
+        return isinstance(message, HumanMessage) and message.content.startswith('https://')

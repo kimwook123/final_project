@@ -3,7 +3,7 @@ from flask import Blueprint, url_for, request, render_template, g, flash, jsonif
 from werkzeug.utils import redirect
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage ,HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
