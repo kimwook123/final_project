@@ -31,14 +31,25 @@
 
         // 서버에 메시지 전송
         try {
-            const response = await axios.post('http://localhost:5000/chatbot/chat', {
+            const response = await axios.post('/imagebot/image', {
                 message: userInput
             });
 
             // 챗봇의 응답을 채팅 창에 추가
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message bot-message';
-            botMessageDiv.textContent = response.data.response;
+            const imageUrl = response.data.response;
+            
+            if (imageUrl.startsWith('http')) {  // 이미지 URL이 응답에 포함된 경우
+                const botImage = document.createElement('img');
+                botImage.src = imageUrl;
+                botImage.alt = '생성된 이미지';
+                botImage.style.maxWidth = '100%';  // 이미지 크기를 적절히 조절
+                botImage.style.maxHeight = '100%';
+                botMessageDiv.appendChild(botImage);
+            } else {
+                botMessageDiv.textContent = response.data.response;
+            }
             document.getElementById('chatContainer').appendChild(botMessageDiv);
         } catch (error) {
             console.error('서버와의 통신 오류:', error);

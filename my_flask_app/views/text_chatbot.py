@@ -26,7 +26,8 @@ def chat():
         user_input = request.json.get('message')
         response = model.get_response(user_input)
 
-        return jsonify({'response': list(response)})
+        print((response))
+        return jsonify({'response': (response)})
     except Exception as e:
         print(str(e))
         return jsonify({'error': str(e)}), 500
@@ -67,10 +68,12 @@ class ChatModel:
 
             for message in response['messages']:
                 if isinstance(message, AIMessage):
+                    if message.content == "":
+                        continue
                     if isinstance(message.content, str):
-                        yield message.content
+                        return message.content
                     elif len(message.content) > 0 and message.content[0]['type'] == 'text':
-                        yield message.content[0]['text']
+                        return message.content[0]['text']
         except Exception as e:
             print(f"Error invoking the model: {str(e)}")
-            yield f"Error: {str(e)}"
+            return f"Error: {str(e)}"
