@@ -44,3 +44,74 @@ width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조�
   margin-left: 15px;  /* 버튼과 입력 필드 사이 간격 조정 */
   padding: 10px 20px;
 }
+
+/* image_chatbot 전용 스타일 */
+.image-chatbot-container {
+  background-color: #f4f4f4; /* 더 차분한 배경색 */
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* 컨테이너에 그림자 추가 */
+}
+
+/* 메시지 컨테이너 스타일 */
+.image-chatbot-container .chat-container {
+  background-color: #fbfbfb; /* 아주 밝은 회색 배경 */
+  padding: 15px;
+  border-radius: 8px;
+  overflow-y: auto;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0px 4px 6px rgba(0, 0, 0, 0.1); /* 안쪽 그림자 추가 */
+}
+
+/* 메시지 기본 스타일 */
+.image-chatbot-container .message {
+  padding: 10px 15px;
+  border-radius: 12px;
+  max-width: 65%;
+  display: inline-block;
+  margin: 8px 0;
+  font-family: 'Arial', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* 사용자 메시지 (오른쪽 정렬) */
+.image-chatbot-container .message.image-user-message {
+  background-color: #e8f0f2; /* 은은한 파란색 배경 */
+  color: #065a44;
+  align-self: flex-end; /* 오른쪽 정렬 */
+  text-align: right;
+  box-shadow: 0px 2px 4px rgba(0, 150, 100, 0.2); /* 사용자 메시지 그림자 */
+}
+
+/* AI 메시지 (왼쪽 정렬) */
+.image-chatbot-container .message.bot-message.image-bot-message {
+  background-color: #f1f1f1; /* 차분한 회색 배경 */
+  color: #004d66;
+  align-self: flex-start; /* 왼쪽 정렬 */
+  text-align: left;
+  box-shadow: 0px 2px 4px rgba(0, 100, 150, 0.2); /* AI 메시지 그림자 */
+}
+
+/* AI 메시지의 이미지 스타일 */
+.image-chatbot-container .bot-message img {
+  max-width: 95%; /* 이미지를 더 크게 표시 */
+  height: auto;
+  border-radius: 12px;
+  margin-top: 10px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15); /* 이미지에 그림자 추가 */
+}
+
+/* 헤더 스타일 */
+.image-chatbot-container h2 {
+  color: #00796b;
+  text-align: center;
+  font-family: 'Arial', sans-serif;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+}

@@ -53,10 +53,14 @@ class ImageChatModel:
         # TavilySearch를 이용해 최신 트렌드 검색
         search_results = self.search_tool.invoke("latest marketing trends")
         trends = [result.get("title", "No Title") for result in search_results]
+        
+        # "No Title"이 아닌 트렌드만 포함
+        filtered_trends = [title for title in trends if title != "No Title"]
+
 
         # 사용자 메시지와 최신 트렌드 결합
         user_message = state['messages'][0].content
-        prompt_with_trends = f"{user_message}. 최신 트렌드: {', '.join(trends)}."
+        prompt_with_trends = f"{user_message}. 최신 트렌드: {', '.join(trends)}. Generate a visual representation without any text elements."
 
         # DALL-E 모델에 프롬프트 전달
         response = self.client.images.generate(

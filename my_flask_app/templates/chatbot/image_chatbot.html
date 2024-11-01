@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-5 image-chatbot-container">
     <h2 class="text-center">이미지 생성</h2>
     <div class="chat-container" id="chatContainer">
         <!-- 채팅 메시지 표시 -->
@@ -25,10 +25,14 @@
 
         // 사용자의 메시지를 채팅 창에 추가
         const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'message user-message';
+        userMessageDiv.className = 'message image-user-message'; // image-user-message 클래스를 추가
         userMessageDiv.textContent = userInput;
         document.getElementById('chatContainer').appendChild(userMessageDiv);
 
+        // 입력 필드를 초기화하고 플레이스홀더를 '이미지를 생성하는 중입니다...'으로 변경
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').setAttribute('placeholder', '이미지를 생성하는 중입니다...');
+        
         // 서버에 메시지 전송
         try {
             const response = await axios.post('http://localhost:5000/imagebot/image', {
@@ -37,7 +41,10 @@
 
             // 챗봇의 응답을 채팅 창에 추가
             const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.className = 'message bot-message image-bot-message'; // image-bot-message 클래스를 추가
+
+            // 응답 후 플레이스홀더 복원
+            document.getElementById('userInput').setAttribute('placeholder', '이미지를 생성하는 중입니다...');
 
             // 응답이 이미지 URL일 경우 <img> 태그로 표시
             if (response.data.response.startsWith('http')) {
