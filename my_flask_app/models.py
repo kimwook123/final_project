@@ -44,11 +44,12 @@ class User(db.Model, UserMixin):
 
 class ChatHistory(db.Model):
     __tablename__ = 'chat_history'
-    username = db.Column(db.Text, db.ForeignKey('user.id'), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 고유 ID 추가
+    username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user_question = db.Column(db.Text, nullable=True)
     maked_text = db.Column(db.Text, nullable=False)
-    maked_image_url = db.Column(db.Text, nullable=False)
-    maked_blog_post = db.Column(db.Text, nullable=False)
+    maked_image_url = db.Column(db.Text, nullable=True)
+    maked_blog_post = db.Column(db.Text, nullable=True)
 
     user = db.relationship('User', backref=db.backref('chat_histories', lazy=True))
     
