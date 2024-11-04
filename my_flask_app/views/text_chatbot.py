@@ -9,6 +9,11 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
 import os
 from dotenv import load_dotenv
+from .. import db
+from my_flask_app.forms import UserLoginForm
+from my_flask_app.models import User, ChatHistory
+from flask_login import current_user
+import sqlite3
 
 load_dotenv() # .env에 작성한 변수를 불러온다.
 
@@ -24,7 +29,18 @@ def chat():
         model_id = os.getenv('MODEL_ID')
         model = ChatModel(model_id=model_id)
         user_input = request.json.get('message')
+
         response = model.get_response(user_input)
+
+        if current_user.is_authenticated:
+            chat_history = ChatHistory(
+                username=current_user.id,
+                user_question=user_input,
+                maked_text=response
+            )
+            db.session.add(chat_history)
+            db.session.commit()
+            print("데이터베이스에 질문 저장 완료")
 
         print((response))
         return jsonify({'response': (response)})

@@ -7,13 +7,11 @@ from langchain_core.messages import AIMessage, HumanMessage  # HumanMessage 추�
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
-# from langchain.chains import LLMChain
-# from langchain_community.utilities.dalle_image_generator import DallEAPIWrapper
 from langchain_core.prompts import PromptTemplate
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-
+import sqlite3
 
 load_dotenv()  # .env에 작성한 변수를 불러온다.
 
