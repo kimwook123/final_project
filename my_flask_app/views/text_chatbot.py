@@ -3,12 +3,17 @@ from flask import Blueprint, url_for, request, render_template, g, flash, jsonif
 from werkzeug.utils import redirect
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
-from langchain_core.messages import AIMessage ,HumanMessage
+from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
 import os
 from dotenv import load_dotenv
+from .. import db
+from my_flask_app.forms import UserLoginForm
+from my_flask_app.models import User, ChatHistory
+from flask_login import current_user
+import sqlite3
 
 load_dotenv() # .env에 작성한 변수를 불러온다.
 
@@ -24,7 +29,20 @@ def chat():
         model_id = os.getenv('MODEL_ID')
         model = ChatModel(model_id=model_id)
         user_input = request.json.get('message')
+
         response = model.get_response(user_input)
+
+        if current_user.is_authenticated:
+            chat_history = ChatHistory(
+                username=current_user.id,
+                user_question=user_input,
+                maked_text=response,
+                maked_image_url='', # 예: 이미지를 생성하지 않으면 빈 문자열
+                maked_blog_post=''  # 예: 블로그 게시물이 없으면 빈 문자열
+            )
+            db.session.add(chat_history)
+            db.session.commit()
+            print("데이터베이스에 질문 저장 완료")
 
         print((response))
         return jsonify({'response': (response)})
@@ -54,14 +72,9 @@ class ChatModel:
         self.memory = MemorySaver()
         self.graph = self.graph_builder.compile(checkpointer=self.memory)
         self.config = {'configurable': {'thread_id': '1'}}
-        
-        # 프롬프트 메시지 추가
-        self.system_prompt = {"role": "system", "content": "너는 텍스트 광고를 만드는 챗봇이야. 텍스트 광고만 생성해야 해. 광고와 무관한 질문에는 '죄송합니다, 저는 광고 작성에만 도움을 드릴 수 있습니다.'라고 답하세요."}
-        
+
     def _call_model(self, state: MessagesState):
-        # 시스템 프롬프트를 메시지의 시작에 추가
-        messages_with_prompt = [self.system_prompt] + state['messages']
-        return {'messages': self.chat_model_with_tools.invoke(messages_with_prompt)}
+        return {'messages': self.chat_model_with_tools.invoke(state['messages'])}
 
     def get_response(self, prompt: str):
         """모델에 대한 요청을 보내고 응답을 받는다."""

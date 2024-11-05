@@ -1,4 +1,5 @@
 from my_flask_app import db
+from flask_login import UserMixin
 
 question_voter = db.Table(
     'question_voter',
@@ -34,8 +35,21 @@ class Answer(db.Model):
     voter = db.relationship('User', secondary=answer_voter, backref=db.backref('answer_voter_set'))
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+
+
+class ChatHistory(db.Model):
+    __tablename__ = 'chat_history'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 고유 ID 추가
+    username = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_question = db.Column(db.Text, nullable=True)
+    maked_text = db.Column(db.Text, nullable=False)
+    maked_image_url = db.Column(db.Text, nullable=True)
+    maked_blog_post = db.Column(db.Text, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('chat_histories', lazy=True))
+    
