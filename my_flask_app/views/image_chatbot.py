@@ -12,6 +12,14 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import sqlite3
+import boto3
+import requests
+from my_flask_app.models import User, ChatHistory
+from flask_login import current_user
+from .. import db
+
+
+MY_BUCKET_NAME = "wooksterbucket"
 
 load_dotenv()  # .env에 작성한 변수를 불러온다.
 
@@ -28,6 +36,43 @@ def image():
         model = ImageChatModel(model_id=model_id)
         user_input = request.json.get('message')
         response = model.get_response(user_input)
+
+        save_folder = "./my_flask_app/static/images"
+        os.makedirs(save_folder, exist_ok=True) # 폴더가 없을 때 생성하는 코드인데, 폴더를 만들어 둠
+
+        counter = 1
+        base_filename = f"{current_user.username}_{counter}.jpg"
+        file_path = os.path.join(save_folder, base_filename)
+
+        while os.path.exists(file_path):
+            counter += 1
+            file_path = os.path.join(save_folder, f"{current_user.username}_{counter}.jpg")
+
+        img_data = requests.get(response).content
+        with open(file_path, 'wb') as handler:
+            handler.write(img_data)
+            print("이미지 저장 완료")
+
+        s3_client = boto3.client('s3', region_name = 'ap-northeast-2') # 저장 버킷 기본설정
+        # bucket 에 생성한 이미지 저장
+        s3_client.upload_file(f'./my_flask_app/static/images/{current_user.username}_{counter}.jpg', MY_BUCKET_NAME, f'{current_user.username}_{counter}.jpg')
+
+        # bucket 에 저장한 이미지 url 링크를 받아와야함.
+        image_url = f"https://wooksterbucket.s3.ap.northeast-2.amazonaws.com/{current_user.username}_{counter}.jpg"
+
+        # db 저장
+        if current_user.is_authenticated:
+            chat_history = ChatHistory(
+                username=current_user.username,
+                user_question=user_input,
+                maked_text='',
+                maked_image_url=image_url,
+                maked_blog_post=''
+            )
+            db.session.add(chat_history)
+            db.session.commit()
+            print('db 저장 완료')
+
         return jsonify({'response': response})
     
     except Exception as e:

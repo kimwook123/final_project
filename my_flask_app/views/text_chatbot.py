@@ -30,7 +30,7 @@ def chat():
         model = ChatModel(model_id=model_id)
         user_input = request.json.get('message')
 
-        # current_user 값과 is_authenticated 상태 출력
+        # current_user 값과 is_authenticated 상태 출력(확인용)
         print("Current User:", current_user)
         print("Is Authenticated:", current_user.is_authenticated)
 
@@ -38,11 +38,11 @@ def chat():
 
         if current_user.is_authenticated:
             chat_history = ChatHistory(
-                username=current_user.id,
+                username=current_user.username,
                 user_question=user_input,
                 maked_text=response,
-                maked_image_url='',  # 예: 이미지를 생성하지 않으면 빈 문자열
-                maked_blog_post=''   # 예: 블로그 게시물이 없으면 빈 문자열
+                maked_image_url='',  # 이미지를 생성하지 않으면 빈 문자열
+                maked_blog_post=''
             )
             db.session.add(chat_history)
             db.session.commit()
