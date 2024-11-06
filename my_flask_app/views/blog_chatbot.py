@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import Blueprint, url_for, request, render_template, g, flash, jsonify
 from werkzeug.utils import redirect
 from langchain_openai import ChatOpenAI
@@ -15,34 +14,39 @@ from my_flask_app.models import User, ChatHistory
 from flask_login import current_user
 import sqlite3
 
-load_dotenv() # .env에 작성한 변수를 불러온다.
+from my_flask_app.prompts import generate_prompt
 
-bp = Blueprint('chat', __name__, url_prefix='/chatbot')
+load_dotenv()
 
-@bp.route('/chat', methods=['GET'])
-def chat_page():
-    return render_template('chatbot/text_chatbot.html')
+bp = Blueprint('blog', __name__, url_prefix='/blogbot')
 
-@bp.route('/chat', methods=['POST'])
-def chat():
+@bp.route('/blog', methods=['GET'])
+def blog_chat_page():
+    return render_template('chatbot/blog_chatbot.html')
+
+
+@bp.route('/blog', methods=['POST'])
+def blog():
     try:
-        model_id = os.getenv('MODEL_ID')
-        model = ChatModel(model_id=model_id)
-        user_input = request.json.get('message')
+        options = request.json.get('options')
+        prompt = generate_prompt(options)
 
-        response = model.get_response(user_input)
+        model_id = os.getenv('MODEL_ID')
+        model = BlogModel(model_id=model_id)
+        response = model.get_response(prompt)
+        # response = model.get_response('messages')
 
         if current_user.is_authenticated:
             chat_history = ChatHistory(
                 username=current_user.username,
-                user_question=user_input,
-                maked_text=response,
+                user_question='', # 프롬프트에서 사용자가 고른 옵션들만 가져와서 저장하기
+                maked_text=None,
                 maked_image_url=None,  # 이미지를 생성하지 않으면 빈 문자열
-                maked_blog_post=None
+                maked_blog_post=response
             )
             db.session.add(chat_history)
             db.session.commit()
-            print("데이터베이스에 질문 저장 완료")
+            print("데이터베이스에 저장 완료")
 
         print((response))
         return jsonify({'response': (response)})
@@ -50,9 +54,8 @@ def chat():
         print(str(e))
         return jsonify({'error': str(e)}), 500
     
-class ChatModel:
-    """Chat 모델 클래스는 주어진 모델 ID로 대화 모델을 초기화하고 요청에 대한 응답을 제공합니다."""
-    
+
+class BlogModel:
     def __init__(self, model_id):
         api_key = os.getenv('OPENAI_API_KEY')
         self.chat_model = ChatOpenAI(model=model_id)
@@ -75,23 +78,23 @@ class ChatModel:
 
     def _call_model(self, state: MessagesState):
         return {'messages': self.chat_model_with_tools.invoke(state['messages'])}
+    
 
     def get_response(self, prompt: str):
-        """모델에 대한 요청을 보내고 응답을 받는다."""
         try:
             response = self.graph.invoke(
                 {'messages': prompt},
-                config=self.config
+                config = self.config
             )
 
             for message in response['messages']:
                 if isinstance(message, AIMessage):
-                    if message.content == "":
-                        continue
-                    if isinstance(message.content, str):
-                        return message.content
-                    elif len(message.content) > 0 and message.content[0]['type'] == 'text':
-                        return message.content[0]['text']
+                    continue
+                if isinstance(message.content, str):
+                    return message.content
+                elif len(message.content) > 0 and message.content[0]['type'] == 'text':
+                    return message.content[0]['text']
+                
         except Exception as e:
-            print(f"Error invoking the model: {str(e)}")
+            print(f"Error invoking the model: {str(3)}")
             return f"Error: {str(e)}"

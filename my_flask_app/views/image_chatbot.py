@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import Blueprint, url_for, request, render_template, g, flash, jsonify
 from werkzeug.utils import redirect
 from langchain_openai import OpenAI
@@ -65,9 +64,9 @@ def image():
             chat_history = ChatHistory(
                 username=current_user.username,
                 user_question=user_input,
-                maked_text='',
+                maked_text=None,
                 maked_image_url=image_url,
-                maked_blog_post=''
+                maked_blog_post=None
             )
             db.session.add(chat_history)
             db.session.commit()
@@ -93,7 +92,7 @@ class ImageChatModel:
             "role": "system",
             "content": (
                 "너는 텍스트와 이미지 광고를 만드는 AI야. 사용자 요청에 맞는 최신 트렌드 정보를 기반으로 광고용 이미지를 생성해줘. "
-                "광고와 무관한 질문에는 '죄송합니다, 저는 광고 작성에만 도움을 드릴 수 있습니다.'라고 답하세요."
+                "광고와 무관한 질문에는 '죄송합니다, 저는 광고 작성에만 도움을 드릴 수 있습니다.'라고 답해."
             )
         }
 
