@@ -12,7 +12,6 @@ from .. import db
 from my_flask_app.forms import UserLoginForm
 from my_flask_app.models import User, ChatHistory
 from flask_login import current_user
-import sqlite3
 
 from my_flask_app.prompts import generate_prompt
 
@@ -39,7 +38,7 @@ def blog():
         if current_user.is_authenticated:
             chat_history = ChatHistory(
                 username=current_user.username,
-                user_question='', # 프롬프트에서 사용자가 고른 옵션들만 가져와서 저장하기
+                user_question=prompt, # 프롬프트에서 사용자가 고른 옵션들만 가져와서 저장하기
                 maked_text=None,
                 maked_image_url=None,  # 이미지를 생성하지 않으면 빈 문자열
                 maked_blog_post=response
