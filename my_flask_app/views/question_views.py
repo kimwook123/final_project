@@ -19,16 +19,16 @@ def _list():
     question_list = Question.query.order_by(Question.create_date.desc())
     if kw:
         search = '%%{}%%'.format(kw)
-        sub_query = db.session.query(Answer.question_id, Answer.content, User.username) \
+        sub_query = db.session.query(Answer.question_id, Answer.content, User.user_id) \
             .join(User, Answer.user_id == User.id).subquery()
         question_list = question_list \
             .join(User) \
             .outerjoin(sub_query, sub_query.c.question_id == Question.id) \
             .filter(Question.subject.ilike(search) |  # 질문제목
                     Question.content.ilike(search) |  # 질문내용
-                    User.username.ilike(search) |  # 질문작성자
+                    User.user_id.ilike(search) |  # 질문작성자
                     sub_query.c.content.ilike(search) |  # 답변내용
-                    sub_query.c.username.ilike(search)  # 답변작성자
+                    sub_query.c.user_id.ilike(search)  # 답변작성자
                     ) \
             .distinct()
     question_list = question_list.paginate(page=page, per_page=10)

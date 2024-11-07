@@ -1,5 +1,6 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "history_sidebar.html" %}
+
+{% block main_content %}
 <div class="container mt-5">
     <h2 class="text-center">챗봇과의 대화</h2>
     <div class="chat-container" id="chatContainer">
@@ -15,57 +16,84 @@
 {% endblock %}
 
 {% block script %}
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-    // 메시지 전송 함수
     async function sendMessage() {
         const userInput = document.getElementById('userInput').value;
         if (!userInput) return;
 
-        // 사용자의 메시지를 채팅 창에 추가
         const userMessageDiv = document.createElement('div');
         userMessageDiv.className = 'message user-message';
         userMessageDiv.textContent = userInput;
         document.getElementById('chatContainer').appendChild(userMessageDiv);
 
-        // 입력 필드를 초기화하고 플레이스홀더를 '로딩 중...'으로 변경
         document.getElementById('userInput').value = '';
         document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
 
-        // 서버에 메시지 전송
         try {
-            const response = await axios.post('/chatbot/chat', {
-                message: userInput
-            });
-
-            // 챗봇의 응답을 채팅 창에 추가
+            const response = await axios.post('/chatbot/chat', { message: userInput });
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message bot-message';
             botMessageDiv.textContent = response.data.response;
             document.getElementById('chatContainer').appendChild(botMessageDiv);
 
-            // 응답 후 플레이스홀더 복원
             document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
+            await updateSidebar();
 
         } catch (error) {
             console.error('서버와의 통신 오류:', error);
             document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
         }
-
-        // 스크롤을 아래로 자동으로 이동
         document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
     }
 
-    // '전송' 버튼 클릭 이벤트 리스너
-    document.getElementById('sendButton').addEventListener('click', sendMessage);
+    async function updateSidebar() {
+        try {
+            const response = await axios.get('/chatbot/get_history');
+            const sidebar = document.querySelector('#sidebar .nav');
+            sidebar.innerHTML = '';
 
-    // 엔터 키 입력 이벤트 리스너
+            response.data.chat_histories.forEach(history => {
+                const li = document.createElement('li');
+                li.className = 'nav-item';
+                const link = document.createElement('a');
+                link.className = 'nav-link';
+                link.href = '#';
+                link.textContent = history.user_question.slice(0, 20) + '...';
+                link.onclick = () => loadChatHistory(history.id);
+
+                li.appendChild(link);
+                sidebar.appendChild(li);
+            });
+        } catch (error) {
+            console.error('사이드바 업데이트 오류:', error);
+        }
+    }
+
+    async function loadChatHistory(historyId) {
+        try {
+            const response = await axios.get(`/chatbot/get_chat/${historyId}`);
+            const chatContentDiv = document.getElementById('chatContent');
+            chatContentDiv.innerHTML = `
+                <h5>질문</h5>
+                <p>${response.data.user_question}</p>
+                <h5>응답</h5>
+                <p>${response.data.maked_text}</p>
+            `;
+        } catch (error) {
+            console.error('채팅 기록 불러오기 오류:', error);
+            document.getElementById('chatContent').innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
+        }
+    }
+
+    document.getElementById('sendButton').addEventListener('click', sendMessage);
     document.getElementById('userInput').addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
-            event.preventDefault(); // 기본 엔터 동작을 막음
-            sendMessage(); // 메시지 전송 함수 호출
+            event.preventDefault();
+            sendMessage();
         }
     });
+
+    updateSidebar();
 </script>
 {% endblock %}
