@@ -16,3 +16,4 @@ boto3
 flask_login
 sqlite3
 requests
+wheel
