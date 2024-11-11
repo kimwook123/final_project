@@ -34,14 +34,13 @@ def create_app():
     from . import models
 
     # 블루프린트 등록
-    from .views import main_views, question_views, answer_views, auth_views, text_chatbot, image_chatbot, blog_chatbot
+    from .views import main_views, question_views, answer_views, auth_views, text_chatbot, image_chatbot
     app.register_blueprint(main_views.bp)
     app.register_blueprint(question_views.bp)
     app.register_blueprint(answer_views.bp)
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(text_chatbot.bp)
     app.register_blueprint(image_chatbot.bp)
-    app.register_blueprint(blog_chatbot.bp)
     
     # 필터
     from .filter import format_datetime

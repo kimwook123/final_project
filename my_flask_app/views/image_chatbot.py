@@ -4,7 +4,6 @@ from langchain_openai import OpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langchain_core.messages import AIMessage, HumanMessage  # HumanMessage 추가
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import ToolNode, tools_condition
 from langchain_core.prompts import PromptTemplate
 import os
@@ -97,25 +96,6 @@ class ImageChatModel:
         }
 
     def _call_model(self, state: MessagesState):
-        # 최신 트렌드를 검색하여 검색 결과를 시스템 프롬프트에 추가
-        # search_results = self.tool.invoke("최신 트렌드")  # 예시 키워드, 실제 사용 시에는 사용자 주제 관련 키워드 사용
-        # print("Search Results:", search_results)  # 구조 확인
-
-        # 검색 결과에서 title 추출, title이 없을 경우 "제목 없음" 반환
-        # trends = [result.get("title", "제목 없음") for result in search_results]
-
-        # 사용자 입력과 최신 트렌드를 결합하여 프롬프트 작성
-        # if isinstance(state['messages'][0], HumanMessage):  # HumanMessage 객체 확인
-        #     user_message = state['messages'][0].content
-        # else:
-        #     user_message = state['messages'][0].get('content', '')
-
-        # prompt_content = f"{user_message} 최신 트렌드 참고: {', '.join(trends)}"
-        
-        # 시스템 프롬프트와 사용자 메시지를 결합
-        # messages_with_prompt = [self.system_prompt, {"role": "user", "content": prompt_content}]
-        
-        
         prompt = PromptTemplate(
             input_variables=["image_desc"],
             template="Generate a detailed prompt to generate an image based on the following description: {image_desc}",
