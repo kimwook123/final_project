@@ -1,4 +1,3 @@
-from datetime import datetime
 from flask import Blueprint, url_for, request, render_template, g, flash, jsonify
 from werkzeug.utils import redirect
 from langchain_openai import ChatOpenAI
@@ -10,10 +9,8 @@ from langgraph.prebuilt import ToolNode, tools_condition
 import os
 from dotenv import load_dotenv
 from .. import db
-from my_flask_app.forms import UserLoginForm
-from my_flask_app.models import User, ChatHistory
+from my_flask_app.models import ChatHistory
 from flask_login import current_user
-import sqlite3
 
 load_dotenv() # .env에 작성한 변수를 불러온다.
 

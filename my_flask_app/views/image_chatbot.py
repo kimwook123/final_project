@@ -4,15 +4,14 @@ from langchain_openai import OpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
 from langchain_core.messages import AIMessage, HumanMessage  # HumanMessage 추가
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.prebuilt import tools_condition
 from langchain_core.prompts import PromptTemplate
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-import sqlite3
 import boto3
 import requests
-from my_flask_app.models import User, ChatHistory
+from my_flask_app.models import ChatHistory
 from flask_login import current_user
 from .. import db
 
