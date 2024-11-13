@@ -52,7 +52,7 @@ class ChatHistory(db.Model):
     maked_image_url = db.Column(db.Text, nullable=True)
     maked_blog_post = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    type = db.Column(db.String(10), nullable=False)
+    type = db.Column(db.String(20), nullable=False)
 
     @classmethod
     def get_user_history(cls, user_id):

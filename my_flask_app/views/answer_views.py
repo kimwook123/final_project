@@ -1,8 +1,7 @@
 from datetime import datetime
 from flask import Blueprint, url_for, request, render_template, g, flash
 from werkzeug.utils import redirect
-
-from .auth_views import login_required
+from flask_login import login_required, current_user
 
 from .. import db
 from ..forms import AnswerForm
@@ -18,7 +17,7 @@ def create(question_id):
     question = Question.query.get_or_404(question_id)
     if form.validate_on_submit():
         content = request.form['content']
-        answer = Answer(content=content, create_date=datetime.now(), user=g.user)
+        answer = Answer(content=content, create_date=datetime.now(), user=current_user)
         question.answer_set.append(answer)
         db.session.commit()
         return redirect('{}#answer_{}'.format(
@@ -30,7 +29,7 @@ def create(question_id):
 @login_required
 def modify(answer_id):
     answer = Answer.query.get_or_404(answer_id)
-    if g.user != answer.user:
+    if current_user != answer.user:
         flash('수정권한이 없습니다')
         return redirect(url_for('question.detail', question_id=answer.question.id))
     if request.method == "POST":
@@ -51,7 +50,7 @@ def modify(answer_id):
 def delete(answer_id):
     answer = Answer.query.get_or_404(answer_id)
     question_id = answer.question.id
-    if g.user != answer.user:
+    if current_user != answer.user:
         flash('삭제권한이 없습니다')
     else:
         db.session.delete(answer)
@@ -63,10 +62,10 @@ def delete(answer_id):
 @login_required
 def vote(answer_id):
     _answer = Answer.query.get_or_404(answer_id)
-    if g.user == _answer.user:
+    if current_user == _answer.user:
         flash('본인이 작성한 글은 추천할수 없습니다')
     else:
-        _answer.voter.append(g.user)
+        _answer.voter.append(current_user)
         db.session.commit()
     return redirect('{}#answer_{}'.format(
                 url_for('question.detail', question_id=_answer.question.id), _answer.id))

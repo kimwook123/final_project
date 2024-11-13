@@ -6,7 +6,9 @@
 
 {% block main_content %}
 <div class="container mt-5 image-chatbot-container" style="min-height: 80vh;">
-    <h2 class="text-center">이미지 챗봇과의 대화</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-center">이미지 챗봇과의 대화</h2>
+    </div>
     <div class="chat-container" id="chatContainer" style="height: 60vh; overflow-y: auto;">
         <!-- 채팅 메시지 표시 -->
     </div>
@@ -21,96 +23,131 @@
 
 {% block script %}
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 <script>
-    async function sendMessage() {
-        const userInput = document.getElementById('userInput').value;
-        if (!userInput) return;
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("DOM fully loaded and parsed.");
 
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.className = 'message image-user-message';
-        userMessageDiv.textContent = userInput;
-        document.getElementById('chatContainer').appendChild(userMessageDiv);
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput').value;
+            if (!userInput) return;
 
-        document.getElementById('userInput').value = '';
-        document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message image-user-message';
+            userMessageDiv.textContent = userInput;
+            document.getElementById('chatContainer').appendChild(userMessageDiv);
 
-        try {
-            const response = await axios.post('/imagebot/image', { message: userInput });
-            const botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message image-bot-message';
+            document.getElementById('userInput').value = '';
+            document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
 
-            if (response.data.response.startsWith('http')) {
-                // 이미지 URL이면 이미지 태그로 추가
-                const imageElement = document.createElement('img');
-                imageElement.src = response.data.response;
-                imageElement.alt = 'Generated Image';
-                imageElement.className = 'chatbot-image';
-                imageElement.style.maxWidth = '100%';
-                imageElement.style.marginTop = '10px';
-                botMessageDiv.appendChild(imageElement);
-            } else {
-                // 텍스트 응답이면 텍스트로 추가
-                botMessageDiv.textContent = response.data.response;
+            try {
+                const response = await axios.post('/imagebot/image', { message: userInput });
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'message image-bot-message';
+
+                if (response.data.response.startsWith('http')) {
+                    const imageElement = document.createElement('img');
+                    imageElement.src = response.data.response;
+                    imageElement.alt = 'Generated Image';
+                    imageElement.className = 'chatbot-image';
+                    imageElement.style.maxWidth = '100%';
+                    imageElement.style.marginTop = '10px';
+                    botMessageDiv.appendChild(imageElement);
+                } else {
+                    botMessageDiv.textContent = response.data.response;
+                }
+
+                document.getElementById('chatContainer').appendChild(botMessageDiv);
+                document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
+                await updateSidebar();
+
+            } catch (error) {
+                console.error('서버와의 통신 오류:', error);
+                document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
             }
-
-            document.getElementById('chatContainer').appendChild(botMessageDiv);
-            document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
-            await updateSidebar();
-
-        } catch (error) {
-            console.error('서버와의 통신 오류:', error);
-            document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
+            document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
         }
-        document.getElementById('chatContainer').scrollTop = chatContainer.scrollHeight;
-    }
 
-    async function updateSidebar() {
-        try {
-            const response = await axios.get('/imagebot/get_history');
-            const sidebar = document.querySelector('#sidebar .nav');
-            sidebar.innerHTML = '';
+        async function updateSidebar() {
+            try {
+                const response = await axios.get('/imagebot/get_history');
+                const sidebar = document.querySelector('#sidebar .nav');
+                sidebar.innerHTML = '';
 
-            response.data.chat_histories.forEach(history => {
-                const li = document.createElement('li');
-                li.className = 'nav-item';
-                const link = document.createElement('a');
-                link.className = 'nav-link';
-                link.href = '#';
-                link.textContent = history.user_question.slice(0, 20) + '...';
-                link.onclick = () => loadChatHistory(history.id);
+                response.data.chat_histories.forEach(history => {
+                    const li = document.createElement('li');
+                    li.className = 'nav-item';
+                    const link = document.createElement('a');
+                    link.className = 'nav-link';
+                    link.href = '#';
+                    link.textContent = history.user_question.slice(0, 20) + '...';
+                    link.onclick = () => loadChatHistory(history.id);
 
-                li.appendChild(link);
-                sidebar.appendChild(li);
+                    li.appendChild(link);
+                    sidebar.appendChild(li);
+                });
+            } catch (error) {
+                console.error('사이드바 업데이트 오류:', error);
+            }
+        }
+
+        async function loadChatHistory(historyId) {
+            try {
+                const response = await axios.get(`/imagebot/get_chat/${historyId}`);
+                const chatContentDiv = document.getElementById('chatContainer');
+                chatContentDiv.innerHTML = '';
+
+                const userMessageDiv = document.createElement('div');
+                userMessageDiv.className = 'message image-user-message';
+                userMessageDiv.textContent = response.data.user_question;
+                chatContentDiv.appendChild(userMessageDiv);
+
+                if (response.data.maked_text) {
+                    const botMessageDiv = document.createElement('div');
+                    botMessageDiv.className = 'message image-bot-message';
+                    botMessageDiv.textContent = response.data.maked_text;
+                    chatContentDiv.appendChild(botMessageDiv);
+                }
+
+                if (response.data.maked_image_url) {
+                    const botImageDiv = document.createElement('div');
+                    botImageDiv.className = 'message image-bot-message';
+                    const imageElement = document.createElement('img');
+                    imageElement.src = response.data.maked_image_url;
+                    imageElement.alt = 'Generated Image';
+                    imageElement.className = 'chatbot-image';
+                    imageElement.style.maxWidth = '100%';
+                    imageElement.style.marginTop = '10px';
+                    botImageDiv.appendChild(imageElement);
+                    chatContentDiv.appendChild(botImageDiv);
+                }
+
+                document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
+
+            } catch (error) {
+                console.error('채팅 기록 불러오기 오류:', error);
+                const chatContentDiv = document.getElementById('chatContainer');
+                chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
+            }
+        }
+
+        const newChatButton = document.getElementById('newChatButton');
+        if (newChatButton) {
+            newChatButton.addEventListener('click', () => {
+                document.getElementById('chatContainer').innerHTML = '';
+                document.getElementById('userInput').value = '';
             });
-        } catch (error) {
-            console.error('사이드바 업데이트 오류:', error);
         }
-    }
 
-    async function loadChatHistory(historyId) {
-        try {
-            const response = await axios.get(`/imagebot/get_chat/${historyId}`);
-            const chatContentDiv = document.getElementById('chatContent');
-            chatContentDiv.innerHTML = `
-                <h5>질문</h5>
-                <p>${response.data.user_question}</p>
-                <h5>응답</h5>
-                <p>${response.data.maked_text}</p>
-            `;
-        } catch (error) {
-            console.error('채팅 기록 불러오기 오류:', error);
-            document.getElementById('chatContent').innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
-        }
-    }
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('userInput').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
 
-    document.getElementById('sendButton').addEventListener('click', sendMessage);
-    document.getElementById('userInput').addEventListener('keydown', function(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            sendMessage();
-        }
+        updateSidebar();
     });
-
-    updateSidebar();
 </script>
 {% endblock %}

@@ -2,8 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, render_template, request, url_for, g, flash
 from werkzeug.utils import redirect
-
-from my_flask_app.views.auth_views import login_required
+from flask_login import login_required, current_user
 
 from .. import db
 from ..models import Question, Answer, User
@@ -19,16 +18,16 @@ def _list():
     question_list = Question.query.order_by(Question.create_date.desc())
     if kw:
         search = '%%{}%%'.format(kw)
-        sub_query = db.session.query(Answer.question_id, Answer.content, User.user_id) \
+        sub_query = db.session.query(Answer.question_id, Answer.content, User.username) \
             .join(User, Answer.user_id == User.id).subquery()
         question_list = question_list \
             .join(User) \
             .outerjoin(sub_query, sub_query.c.question_id == Question.id) \
             .filter(Question.subject.ilike(search) |  # 질문제목
                     Question.content.ilike(search) |  # 질문내용
-                    User.user_id.ilike(search) |  # 질문작성자
+                    User.username.ilike(search) |  # 질문작성자
                     sub_query.c.content.ilike(search) |  # 답변내용
-                    sub_query.c.user_id.ilike(search)  # 답변작성자
+                    sub_query.c.username.ilike(search)  # 답변작성자
                     ) \
             .distinct()
     question_list = question_list.paginate(page=page, per_page=10)
@@ -48,7 +47,7 @@ def detail(question_id):
 def create():
     form = QuestionForm()
     if request.method == 'POST' and form.validate_on_submit():
-        question = Question(subject=form.subject.data, content=form.content.data, create_date=datetime.now(), user=g.user)
+        question = Question(subject=form.subject.data, content=form.content.data, create_date=datetime.now(), user=current_user)
         db.session.add(question)
         db.session.commit()
         return redirect(url_for('main.index'))
@@ -59,7 +58,7 @@ def create():
 @login_required
 def modify(question_id):
     question = Question.query.get_or_404(question_id)
-    if g.user != question.user:
+    if current_user != question.user:
         flash('수정권한이 없습니다')
         return redirect(url_for('question.detail', question_id=question_id))
     if request.method == 'POST':  # POST 요청
@@ -78,7 +77,7 @@ def modify(question_id):
 @login_required
 def delete(question_id):
     question = Question.query.get_or_404(question_id)
-    if g.user != question.user:
+    if current_user != question.user:
         flash('삭제권한이 없습니다')
         return redirect(url_for('question.detail', question_id=question_id))
     db.session.delete(question)
@@ -90,9 +89,9 @@ def delete(question_id):
 @login_required
 def vote(question_id):
     _question = Question.query.get_or_404(question_id)
-    if g.user == _question.user:
+    if current_user == _question.user:
         flash('본인이 작성한 글은 추천할수 없습니다')
     else:
-        _question.voter.append(g.user)
+        _question.voter.append(current_user)
         db.session.commit()
     return redirect(url_for('question.detail', question_id=question_id))
