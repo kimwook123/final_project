@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- 사이드바 -->
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar" style="height: 100vh; overflow-y: auto;">
+            <div class="sidebar-sticky">
+                <!-- 사이드바 헤더 -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="sidebar-heading">이전 기록</h5>
+                    <button class="btn btn-secondary btn-sm" id="newChatButton">NEW CHAT</button>
+                </div>
+                <ul class="nav flex-column" id="chatHistoryList">
+                    {% if chat_histories %}
+                        <!-- 채팅 기록이 있는 경우 표시 -->
+                        {% for history in chat_histories %}
+                            <li class="nav-item d-flex justify-content-between align-items-center">
+                                <a href="#" class="nav-link chat-history-link" data-id="{{ history.id }}" onclick="loadChatHistory(this.dataset.id)">
+                                    {{ history.user_question[:20] }}...
+                                </a>
+                                <button class="btn btn-danger btn-sm delete-button" data-id="{{ history.id }}" onclick="deleteChatHistory(this.dataset.id)">삭제</button>
+                            </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="nav-item">
+                            <span>로그인 후 채팅 기록을 볼 수 있습니다.</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+            {% block main_content %}
+            <div id="chatContent" class="mt-4">
+                <!-- 선택된 채팅 기록의 내용이 표시됩니다. -->
+                <p>기록을 선택하세요.</p>
+            </div>
+            {% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block style %}
+<style>
+    /* 기본 링크 스타일을 검은색으로 변경 */
+    .chat-history-link {
+        color: #000 !important; /* 검은색으로 설정 */
+        text-decoration: none !important;  /* 밑줄 제거 */
+    }
+
+    /* 링크에 마우스를 올렸을 때 색 유지 및 강조 */
+    .chat-history-link:hover {
+        color: #000 !important; /* 검은색 유지 */
+        text-decoration: underline !important; /* 강조를 위해 밑줄 */
+    }
+
+    /* NEW CHAT 버튼 스타일 수정 */
+    #newChatButton {
+        background-color: #343a40; /* 버튼 배경색 어두운 색으로 변경 */
+        color: #ffffff; /* 버튼 텍스트 색상 흰색으로 */
+    }
+    
+    #newChatButton:hover {
+        background-color: #5a6268; /* 버튼 호버시 색상 */
+    }
+
+    /* 삭제 버튼 스타일 */
+    .delete-button {
+        color: #fff;
+        background-color: #dc3545 !important; /* 빨간색 배경, 우선순위 높임 */
+        border: none;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.5rem;
+        margin-left: 5px; /* 삭제 버튼과 채팅 기록 간격 조정 */
+    }
+
+    .delete-button:hover {
+        background-color: #c82333 !important; /* 어두운 빨간색 배경, 우선순위 높임 */
+    }
+
+    /* 메인 콘텐츠 부분은 사이드바 옆으로 밀리도록 설정 */
+    main {
+        padding-top: 20px;
+    }
+
+    /* 컨테이너의 높이를 고정하고 스크롤을 생기도록 설정 */
+    #sidebar {
+        height: 100vh;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("DOM fully loaded and parsed.");
+
+        // 삭제 버튼 기능 추가
+        async function deleteChatHistory(historyId) {
+            try {
+                const response = await axios.delete(`/chatbot/delete_chat/${historyId}`);
+                if (response.status === 200) {
+                    // 삭제 후 사이드바 업데이트
+                    console.log('채팅 기록 삭제 완료:', historyId);
+                    await updateSidebar();
+                } else {
+                    console.error('채팅 기록 삭제 실패:', response.data);
+                }
+            } catch (error) {
+                console.error('채팅 기록 삭제 오류:', error);
+            }
+        }
+
+        // 사이드바 업데이트 함수
+        async function updateSidebar() {
+            try {
+                const response = await axios.get('/chatbot/get_history');
+                const sidebar = document.getElementById('chatHistoryList');
+                sidebar.innerHTML = '';  // 사이드바를 비운 후 새로 채움
+
+                if (response.data.chat_histories.length === 0) {
+                    console.log("No chat histories to display.");
+                }
+
+                response.data.chat_histories.forEach(history => {
+                    const li = document.createElement('li');
+                    li.className = 'nav-item d-flex justify-content-between align-items-center';
+                    
+                    const link = document.createElement('a');
+                    link.className = 'nav-link chat-history-link';
+                    link.href = '#';
+                    link.textContent = history.user_question.slice(0, 20) + '...';
+                    link.dataset.id = history.id;
+                    link.addEventListener('click', () => loadChatHistory(history.id));
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-danger btn-sm delete-button';
+                    deleteBtn.dataset.id = history.id;
+                    deleteBtn.textContent = '삭제';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 클릭 이벤트 전파 방지 (삭제 클릭 시 기록 로드가 안 되도록)
+                        deleteChatHistory(history.id);
+                    });
+
+                    li.appendChild(link);
+                    li.appendChild(deleteBtn);
+                    sidebar.appendChild(li);
+                });
+            } catch (error) {
+                console.error('사이드바 업데이트 오류:', error);
+            }
+        }
+
+        // 채팅 기록 불러오기 함수
+        async function loadChatHistory(historyId) {
+            try {
+                const response = await axios.get(`/chatbot/get_chat/${historyId}`);
+                if (response.status === 200) {
+                    const chatContentDiv = document.getElementById('chatContent');
+                    chatContentDiv.innerHTML = ''; // 기존 내용을 지우고 새로 불러온 기록으로 대체
+
+                    const userMessageDiv = document.createElement('div');
+                    userMessageDiv.className = 'message user-message';
+                    userMessageDiv.textContent = response.data.user_question;
+                    chatContentDiv.appendChild(userMessageDiv);
+
+                    if (response.data.maked_text) {
+                        const botMessageDiv = document.createElement('div');
+                        botMessageDiv.className = 'message bot-message';
+                        botMessageDiv.textContent = response.data.maked_text;
+                        chatContentDiv.appendChild(botMessageDiv);
+                    }
+
+                    document.getElementById('chatContent').scrollTop = chatContentDiv.scrollHeight;
+                } else {
+                    console.error('기록을 찾을 수 없습니다:', response.data);
+                }
+            } catch (error) {
+                console.error('채팅 기록 불러오기 오류:', error);
+                const chatContentDiv = document.getElementById('chatContent');
+                chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
+            }
+        }
+
+        // 초기 사이드바 업데이트
+        updateSidebar();  // 페이지 로드 시 사이드바 업데이트
+    });
+</script>
+{% endblock %}
