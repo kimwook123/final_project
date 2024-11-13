@@ -33,19 +33,17 @@ def delete_chat(history_id):
 @bp.route('/get_history', methods=['GET'])
 def get_text_history():
     if current_user.is_authenticated:
-        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').all()
+        # 텍스트 기록을 최신순으로 가져오기
+        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
         
         # 디버깅용 로그 추가
         print(f"Fetched {len(chat_histories)} chat histories from DB")
         for history in chat_histories:
             print(f"History ID: {history.id}, Question: {history.user_question}")
-
-        # 데이터가 없으면 빈 배열을 반환
-        if not chat_histories:
-            print("No chat histories found in database.")
     else:
         chat_histories = []  # 로그인하지 않은 경우 빈 리스트 반환
     
+    # 데이터를 반환할 때 잘못된 구조로 인해 클라이언트에서 제대로 파싱되지 않을 수 있습니다.
     return jsonify({
         'chat_histories': [
             {'id': history.id, 'user_question': history.user_question}
@@ -56,8 +54,8 @@ def get_text_history():
 @bp.route('/chat', methods=['GET'])
 def chat_page():
     if current_user.is_authenticated:
-        # type='text'인 기록만 가져오기
-        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').all()
+        # type='text'인 기록만 가져오기, 최신순으로 정렬
+        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
     else:
         chat_histories = []  # 로그인하지 않은 경우 빈 리스트 반환
     return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)  # chat_histories 전달
