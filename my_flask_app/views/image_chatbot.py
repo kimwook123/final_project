@@ -109,7 +109,6 @@ def image():
                 user_question=user_input,
                 maked_text='',
                 maked_image_url=image_url,
-                maked_blog_post='',
                 type='image'  # 이미지 타입 지정
             )
             db.session.add(chat_history)

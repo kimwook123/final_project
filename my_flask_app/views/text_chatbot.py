@@ -79,7 +79,6 @@ def chat():
                 user_question=user_input,
                 maked_text=response,
                 maked_image_url='',  # 이미지를 생성하지 않으면 빈 문자열
-                maked_blog_post='',
                 type='text'  # 'text'타입으로 설정
             )
             db.session.add(chat_history)
@@ -145,9 +144,11 @@ class ChatModel:
                     if message.content == "":
                         continue
                     if isinstance(message.content, str):
-                        return message.content
+                        # **로 감싸진 텍스트를 제거
+                        return message.content.replace("**", "")
                     elif len(message.content) > 0 and message.content[0]['type'] == 'text':
-                        return message.content[0]['text']
+                        # **로 감싸진 텍스트를 제거
+                        return message.content[0]['text'].replace("**", "")
         except Exception as e:
             print(f"Error invoking the model: {str(e)}")
             return f"Error: {str(e)}"

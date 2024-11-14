@@ -6,9 +6,10 @@
   overflow-y: scroll;
   background-color: #bacee0;
   display: flex;
-  flex-direction: column; /* 메시지들이 세로로 쌓이도록 */
+  flex-direction: column;
 }
 
+/* 메시지 스타일 */
 .message {
   margin: 10px;
   padding: 10px;
@@ -20,27 +21,27 @@
 /* 사용자 메시지 스타일 (오른쪽 정렬) */
 .user-message {
   background-color: #d1e7dd;
-  align-self: flex-end; /* 오른쪽 정렬 */
+  align-self: flex-end;
   text-align: right;
 }
 
 /* 챗봇 메시지 스타일 (왼쪽 정렬) */
 .bot-message {
   background-color: #F2D230;
-  align-self: flex-start; /* 왼쪽 정렬 */
+  align-self: flex-start;
   text-align: left;
 }
 
-/* 입력 필드 크기 및 스타일 조정 */
+/* 입력 필드 및 버튼 스타일 */
 #userInput {
-border-radius: 5px;
-border: 2px solid #ccc;
-padding: 10px;
-width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조정 */
+  border-radius: 5px;
+  border: 2px solid #ccc;
+  padding: 10px;
+  width: calc(100% - 100px);
 }
-/* 전송 버튼 스타일 */
+
 #sendButton {
-  margin-left: 15px;  /* 버튼과 입력 필드 사이 간격 조정 */
+  margin-left: 15px;
   padding: 10px 20px;
 }
 
@@ -50,24 +51,22 @@ width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조�
   border: 2px solid #ccc;
   border-radius: 10px;
   padding: 20px;
-  width: 100%; /* 너비를 100%로 설정 */
+  width: 100%;
   margin: 0 auto;
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* 메시지 컨테이너 스타일 */
 .image-chatbot-container .chat-container {
-  background-color: #fbfbfb; /* 아주 밝은 회색 배경 */
+  background-color: #fbfbfb;
   padding: 15px;
   border-radius: 8px;
   overflow-y: auto;
   height: 500px;
   display: flex;
   flex-direction: column;
-  box-shadow: inset 0px 4px 6px rgba(0, 0, 0, 0.1); /* 안쪽 그림자 추가 */
+  box-shadow: inset 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* 메시지 기본 스타일 */
 .image-chatbot-container .message {
   padding: 10px 15px;
   border-radius: 12px;
@@ -79,34 +78,30 @@ width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조�
   line-height: 1.4;
 }
 
-/* 사용자 메시지 (오른쪽 정렬) */
 .image-chatbot-container .message.image-user-message {
-  background-color: #e8f0f2; /* 은은한 파란색 배경 */
+  background-color: #e8f0f2;
   color: #065a44;
-  align-self: flex-end; /* 오른쪽 정렬 */
+  align-self: flex-end;
   text-align: right;
-  box-shadow: 0px 2px 4px rgba(0, 150, 100, 0.2); /* 사용자 메시지 그림자 */
+  box-shadow: 0px 2px 4px rgba(0, 150, 100, 0.2);
 }
 
-/* AI 메시지 (왼쪽 정렬) */
 .image-chatbot-container .message.bot-message.image-bot-message {
-  background-color: #f1f1f1; /* 차분한 회색 배경 */
+  background-color: #f1f1f1;
   color: #004d66;
-  align-self: flex-start; /* 왼쪽 정렬 */
+  align-self: flex-start;
   text-align: left;
-  box-shadow: 0px 2px 4px rgba(0, 100, 150, 0.2); /* AI 메시지 그림자 */
+  box-shadow: 0px 2px 4px rgba(0, 100, 150, 0.2);
 }
 
-/* AI 메시지의 이미지 스타일 */
 .image-chatbot-container .bot-message img {
-  max-width: 95%; /* 이미지를 더 크게 표시 */
+  max-width: 95%;
   height: auto;
   border-radius: 12px;
   margin-top: 10px;
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15); /* 이미지에 그림자 추가 */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* 헤더 스타일 */
 .image-chatbot-container h2 {
   color: #000000;
   text-align: center;
@@ -114,16 +109,17 @@ width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조�
   font-size: 1.5rem;
   margin-bottom: 15px;
 }
-/* 사이드바 */
+
+/* 사이드바 스타일 */
 #sidebar {
   background-color: #f8f9fa;
   padding: 15px;
   height: 100vh;
 }
+
 .sidebar-heading {
   font-weight: bold;
 }
-
 
 .history-sidebar {
   width: 250px;
@@ -133,3 +129,51 @@ width: calc(100% - 100px);  /* 전송 버튼과 겹치지 않도록 너비 조�
   border-radius: 8px;
 }
 
+.chat-history-link {
+  color: #000 !important;
+  text-decoration: none !important;
+}
+
+.chat-history-link:hover {
+  color: #000 !important;
+  text-decoration: underline !important;
+}
+
+#newChatButton {
+  background-color: #343a40;
+  color: #ffffff;
+}
+
+#newChatButton:hover {
+  background-color: #5a6268;
+}
+
+/* ... 버튼 스타일 */
+.options-button {
+  background-color: #f8f9fa; /* 배경과 비슷한 연한 회색 */
+  color: #666666; /* 어두운 회색 텍스트 */
+  border: 1px solid #ccc;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.options-button:hover {
+  background-color: #e2e3e5; /* 살짝 어두운 회색으로 호버 효과 */
+}
+
+/* 삭제 버튼 스타일 */
+.delete-button {
+  background-color: #6c757d; /* 진한 회색 */
+  color: #ffffff;
+  border: none;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.delete-button:hover {
+  background-color: #5a6268; /* 진한 회색으로 호버 효과 */
+}
+
+.d-none {
+  display: none !important;
+}

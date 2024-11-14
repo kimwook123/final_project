@@ -50,7 +50,6 @@ class ChatHistory(db.Model):
     user_question = db.Column(db.Text, nullable=True)
     maked_text = db.Column(db.Text, nullable=False)
     maked_image_url = db.Column(db.Text, nullable=True)
-    maked_blog_post = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     type = db.Column(db.String(20), nullable=False)
 
