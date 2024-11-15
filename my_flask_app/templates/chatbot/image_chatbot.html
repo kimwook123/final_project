@@ -7,7 +7,7 @@
 {% block main_content %}
 <div class="container mt-5 image-chatbot-container" style="min-height: 80vh;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="text-center">이미지 챗봇과의 대화</h2>
+        <h2 class="text-center w-100">이미지 챗봇과의 대화</h2>
     </div>
     <div class="chat-container" id="chatContainer" style="height: 60vh; overflow-y: auto;">
         <!-- 채팅 메시지 표시 -->
@@ -27,7 +27,7 @@
 <script>
     // 이미지 챗봇의 기본 URL 설정
     const baseUrl = "/imagebot";
-    
+
     document.addEventListener("DOMContentLoaded", function() {
         document.getElementById('sendButton').addEventListener('click', sendMessage);
         document.getElementById('userInput').addEventListener('keydown', function(event) {
