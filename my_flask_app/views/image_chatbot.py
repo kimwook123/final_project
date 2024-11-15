@@ -41,7 +41,6 @@ def get_chat(chat_id):
         print(str(e))
         return jsonify({'error': str(e)}), 500
 
-
 @bp.route('/get_history', methods=['GET'])
 def get_image_history():
     if current_user.is_authenticated:
@@ -50,6 +49,15 @@ def get_image_history():
         chat_histories = []
     return jsonify({'chat_histories': [{'id': history.id, 'user_question': history.user_question} for history in chat_histories]})
 
+@bp.route('/delete_chat/<int:history_id>', methods=['DELETE'])
+def delete_chat(history_id):
+    if current_user.is_authenticated:
+        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id, type='image').first()
+        if chat_history:
+            db.session.delete(chat_history)
+            db.session.commit()
+            return jsonify({'success': True})
+    return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
 
 @bp.route('/image', methods=['GET'])
 def image_chat_page():
@@ -63,7 +71,6 @@ def image_chat_page():
     except Exception as e:
         print("Error fetching chat histories:", str(e))
         return render_template('chatbot/image_chatbot.html', chat_histories=[])
-
 
 @bp.route('/image', methods=['POST'])
 def image():

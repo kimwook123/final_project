@@ -33,17 +33,12 @@ def delete_chat(history_id):
 @bp.route('/get_history', methods=['GET'])
 def get_text_history():
     if current_user.is_authenticated:
-        # 텍스트 기록을 최신순으로 가져오기
         chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
-        
-        # 디버깅용 로그 추가
         print(f"Fetched {len(chat_histories)} chat histories from DB")
         for history in chat_histories:
             print(f"History ID: {history.id}, Question: {history.user_question}")
     else:
-        chat_histories = []  # 로그인하지 않은 경우 빈 리스트 반환
-    
-    # 데이터를 반환할 때 잘못된 구조로 인해 클라이언트에서 제대로 파싱되지 않을 수 있습니다.
+        chat_histories = []
     return jsonify({
         'chat_histories': [
             {'id': history.id, 'user_question': history.user_question}
@@ -54,11 +49,10 @@ def get_text_history():
 @bp.route('/chat', methods=['GET'])
 def chat_page():
     if current_user.is_authenticated:
-        # type='text'인 기록만 가져오기, 최신순으로 정렬
         chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
     else:
-        chat_histories = []  # 로그인하지 않은 경우 빈 리스트 반환
-    return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)  # chat_histories 전달
+        chat_histories = []
+    return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)
 
 @bp.route('/chat', methods=['POST'])
 def chat():
@@ -66,25 +60,20 @@ def chat():
         model_id = os.getenv('MODEL_ID')
         model = ChatModel(model_id=model_id)
         user_input = request.json.get('message')
-
-        # current_user 값과 is_authenticated 상태 출력(확인용)
         print("Current User:", current_user)
         print("Is Authenticated:", current_user.is_authenticated)
-
         response = model.get_response(user_input)
-
         if current_user.is_authenticated:
             chat_history = ChatHistory(
-                user_id=current_user.id,  # 여기에서 user_id를 current_user.id로 수정했습니다.
+                user_id=current_user.id,
                 user_question=user_input,
                 maked_text=response,
-                maked_image_url='',  # 이미지를 생성하지 않으면 빈 문자열
-                type='text'  # 'text'타입으로 설정
+                maked_image_url='',
+                type='text'
             )
             db.session.add(chat_history)
             db.session.commit()
             print("데이터베이스에 질문 저장 완료")
-
         return jsonify({'response': response})
     except Exception as e:
         print(str(e))
@@ -93,7 +82,6 @@ def chat():
 @bp.route('/get_chat/<int:history_id>', methods=['GET'])
 def get_chat(history_id):
     if current_user.is_authenticated:
-        # 현재 사용자의 특정 기록을 데이터베이스에서 가져옴
         chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
         if chat_history:
             history_data = {
@@ -106,8 +94,6 @@ def get_chat(history_id):
     return jsonify({'error': '인증되지 않았습니다.'}), 403
 
 class ChatModel:
-    """Chat 모델 클래스는 주어진 모델 ID로 대화 모델을 초기화하고 요청에 대한 응답을 제공합니다."""
-    
     def __init__(self, model_id):
         api_key = os.getenv('OPENAI_API_KEY')
         self.chat_model = ChatOpenAI(model=model_id)
@@ -132,22 +118,18 @@ class ChatModel:
         return {'messages': self.chat_model_with_tools.invoke(state['messages'])}
 
     def get_response(self, prompt: str):
-        """모델에 대한 요청을 보내고 응답을 받는다."""
         try:
             response = self.graph.invoke(
                 {'messages': prompt},
                 config=self.config
             )
-
             for message in response['messages']:
                 if isinstance(message, AIMessage):
                     if message.content == "":
                         continue
                     if isinstance(message.content, str):
-                        # **로 감싸진 텍스트를 제거
                         return message.content.replace("**", "")
                     elif len(message.content) > 0 and message.content[0]['type'] == 'text':
-                        # **로 감싸진 텍스트를 제거
                         return message.content[0]['text'].replace("**", "")
         except Exception as e:
             print(f"Error invoking the model: {str(e)}")

@@ -17,122 +17,12 @@
 
 {% block script %}
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="{{ url_for('static', filename='js/shared.js') }}"></script>
 <script>
+    // 텍스트 챗봇의 기본 URL 설정
+    const baseUrl = "/chatbot";
+    
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("DOM fully loaded and parsed.");
-
-        // 메시지 전송 함수
-        async function sendMessage() {
-            const userInput = document.getElementById('userInput').value;
-            if (!userInput) return;
-
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'message user-message';
-            userMessageDiv.textContent = userInput;
-            document.getElementById('chatContainer').appendChild(userMessageDiv);
-
-            document.getElementById('userInput').value = '';
-            document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
-
-            try {
-                const response = await axios.post('/chatbot/chat', { message: userInput });
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'message bot-message';
-                botMessageDiv.textContent = response.data.response;
-                document.getElementById('chatContainer').appendChild(botMessageDiv);
-
-                document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
-                await updateSidebar();  // 메시지 전송 후 사이드바 업데이트
-
-            } catch (error) {
-                console.error('서버와의 통신 오류:', error);
-                document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
-            }
-            document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
-        }
-
-        // 사이드바 업데이트 함수
-        async function updateSidebar() {
-            try {
-                const response = await axios.get('/chatbot/get_history');
-
-                // 데이터가 제대로 수신되는지 콘솔에 출력하여 확인합니다.
-                console.log('Fetched chat histories:', response.data.chat_histories);
-
-                const sidebar = document.querySelector('#sidebar .nav');
-                sidebar.innerHTML = '';  // 사이드바를 비운 후 새로 채움
-
-                if (response.data.chat_histories.length === 0) {
-                    console.log("No chat histories to display.");
-                }
-
-                response.data.chat_histories.forEach(history => {
-                    const li = document.createElement('li');
-                    li.className = 'nav-item';
-                    const link = document.createElement('a');
-                    link.className = 'nav-link chat-history-link';  // 링크 스타일 클래스
-                    link.href = '#';
-                    link.textContent = history.user_question.slice(0, 20) + '...';
-                    link.dataset.id = history.id;
-                    link.addEventListener('click', () => loadChatHistory(history.id));
-
-                    li.appendChild(link);
-                    sidebar.appendChild(li);
-                });
-            } catch (error) {
-                console.error('사이드바 업데이트 오류:', error);
-            }
-        }
-
-        // 채팅 기록 불러오기 함수
-        async function loadChatHistory(historyId) {
-            try {
-                const response = await axios.get(`/chatbot/get_chat/${historyId}`);
-                const chatContentDiv = document.getElementById('chatContainer');
-                chatContentDiv.innerHTML = '';  // 기존 내용을 지우고 새로 불러온 기록으로 대체
-
-                if (response.data.user_question) {
-                    const userMessageDiv = document.createElement('div');
-                    userMessageDiv.className = 'message user-message';
-                    userMessageDiv.textContent = response.data.user_question;
-                    chatContentDiv.appendChild(userMessageDiv);
-                }
-
-                if (response.data.maked_text) {
-                    const botMessageDiv = document.createElement('div');
-                    botMessageDiv.className = 'message bot-message';
-                    botMessageDiv.textContent = response.data.maked_text;
-                    chatContentDiv.appendChild(botMessageDiv);
-                }
-
-                document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
-
-            } catch (error) {
-                console.error('채팅 기록 불러오기 오류:', error);
-                const chatContentDiv = document.getElementById('chatContainer');
-                chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
-            }
-        }
-
-        // 새로운 채팅 시작 함수
-        function startNewChat() {
-            console.log("새 채팅 시작 버튼 클릭됨.");
-            const chatContainer = document.getElementById('chatContainer');
-            chatContainer.innerHTML = ''; // 채팅 내용을 모두 지웁니다
-            document.getElementById('userInput').value = ''; // 입력 필드를 초기화합니다
-            document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
-        }
-
-        // '새 채팅' 버튼 이벤트 리스너 추가
-        const newChatButton = document.getElementById('newChatButton');
-        if (newChatButton) {
-            console.log("새 채팅 시작 버튼을 찾았습니다.");
-            newChatButton.addEventListener('click', startNewChat);
-        } else {
-            console.error("새 채팅 시작 버튼을 찾을 수 없습니다.");
-        }
-
-        // 전송 버튼 및 엔터키 이벤트 핸들러 추가
         document.getElementById('sendButton').addEventListener('click', sendMessage);
         document.getElementById('userInput').addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
@@ -140,8 +30,52 @@
                 sendMessage();
             }
         });
-
-        updateSidebar();  // 페이지 로드 시 사이드바 업데이트
+        updateSidebar('/chatbot/get_history', (historyId) => loadChatHistory(historyId, '/chatbot'));
     });
+    async function sendMessage() {
+        const userInput = document.getElementById('userInput').value;
+        if (!userInput) return;
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'message user-message';
+        userMessageDiv.textContent = userInput;
+        document.getElementById('chatContainer').appendChild(userMessageDiv);
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
+        try {
+            const response = await axios.post('/chatbot/chat', { message: userInput });
+            const botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.textContent = response.data.response;
+            document.getElementById('chatContainer').appendChild(botMessageDiv);
+            document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
+            await updateSidebar('/chatbot/get_history', (historyId) => loadChatHistory(historyId, '/chatbot'));
+        } catch (error) {
+            console.error('서버와의 통신 오류:', error);
+            document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
+        }
+        document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
+    }
+    async function loadChatHistory(historyId, baseUrl) {
+        try {
+            const response = await axios.get(`${baseUrl}/get_chat/${historyId}`);
+            const chatContentDiv = document.getElementById('chatContainer');
+            chatContentDiv.innerHTML = '';
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user-message';
+            userMessageDiv.textContent = response.data.user_question;
+            chatContentDiv.appendChild(userMessageDiv);
+            if (response.data.maked_text) {
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.className = 'message bot-message';
+                botMessageDiv.textContent = response.data.maked_text;
+                chatContentDiv.appendChild(botMessageDiv);
+            }
+            document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
+        } catch (error) {
+            console.error('채팅 기록 불러오기 오류:', error);
+            const chatContentDiv = document.getElementById('chatContainer');
+            chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
+        }
+    }
 </script>
 {% endblock %}
