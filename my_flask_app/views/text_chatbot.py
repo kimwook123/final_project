@@ -18,81 +18,6 @@ from my_flask_app.utils import get_history
 
 load_dotenv()  # .env에 작성한 변수를 불러온다.
 
-bp = Blueprint('chat', __name__, url_prefix='/chatbot')
-
-@bp.route('/delete_chat/<int:history_id>', methods=['DELETE'])
-def delete_chat(history_id):
-    if current_user.is_authenticated:
-        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
-        if chat_history:
-            db.session.delete(chat_history)
-            db.session.commit()
-            return jsonify({'success': True})
-    return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
-
-@bp.route('/get_history', methods=['GET'])
-def get_text_history():
-    if current_user.is_authenticated:
-        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
-        print(f"Fetched {len(chat_histories)} chat histories from DB")
-        for history in chat_histories:
-            print(f"History ID: {history.id}, Question: {history.user_question}")
-    else:
-        chat_histories = []
-    return jsonify({
-        'chat_histories': [
-            {'id': history.id, 'user_question': history.user_question}
-            for history in chat_histories
-        ]
-    })
-
-@bp.route('/chat', methods=['GET'])
-def chat_page():
-    if current_user.is_authenticated:
-        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
-    else:
-        chat_histories = []
-    return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)
-
-@bp.route('/chat', methods=['POST'])
-def chat():
-    try:
-        model_id = os.getenv('MODEL_ID')
-        model = ChatModel(model_id=model_id)
-        user_input = request.json.get('message')
-        print("Current User:", current_user)
-        print("Is Authenticated:", current_user.is_authenticated)
-        response = model.get_response(user_input)
-        if current_user.is_authenticated:
-            chat_history = ChatHistory(
-                user_id=current_user.id,
-                user_question=user_input,
-                maked_text=response,
-                maked_image_url='',
-                type='text'
-            )
-            db.session.add(chat_history)
-            db.session.commit()
-            print("데이터베이스에 질문 저장 완료")
-        return jsonify({'response': response})
-    except Exception as e:
-        print(str(e))
-        return jsonify({'error': str(e)}), 500
-
-@bp.route('/get_chat/<int:history_id>', methods=['GET'])
-def get_chat(history_id):
-    if current_user.is_authenticated:
-        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
-        if chat_history:
-            history_data = {
-                'user_question': chat_history.user_question,
-                'maked_text': chat_history.maked_text
-            }
-            return jsonify(history_data), 200
-        else:
-            return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
-    return jsonify({'error': '인증되지 않았습니다.'}), 403
-
 class ChatModel:
     def __init__(self, model_id):
         api_key = os.getenv('OPENAI_API_KEY')
@@ -134,3 +59,79 @@ class ChatModel:
         except Exception as e:
             print(f"Error invoking the model: {str(e)}")
             return f"Error: {str(e)}"
+
+bp = Blueprint('chat', __name__, url_prefix='/chatbot')
+model_id = os.getenv('MODEL_ID')
+model = ChatModel(model_id=model_id)
+
+@bp.route('/delete_chat/<int:history_id>', methods=['DELETE'])
+def delete_chat(history_id):
+    if current_user.is_authenticated:
+        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
+        if chat_history:
+            db.session.delete(chat_history)
+            db.session.commit()
+            return jsonify({'success': True})
+    return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
+
+@bp.route('/get_history', methods=['GET'])
+def get_text_history():
+    if current_user.is_authenticated:
+        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
+        print(f"Fetched {len(chat_histories)} chat histories from DB")
+        for history in chat_histories:
+            print(f"History ID: {history.id}, Question: {history.user_question}")
+    else:
+        chat_histories = []
+    return jsonify({
+        'chat_histories': [
+            {'id': history.id, 'user_question': history.user_question}
+            for history in chat_histories
+        ]
+    })
+
+@bp.route('/chat', methods=['GET'])
+def chat_page():
+    if current_user.is_authenticated:
+        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
+    else:
+        chat_histories = []
+    return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)
+
+@bp.route('/chat', methods=['POST'])
+def chat():
+    try:
+        user_input = request.json.get('message')
+        print("Current User:", current_user)
+        print("Is Authenticated:", current_user.is_authenticated)
+        response = model.get_response(user_input)
+        if current_user.is_authenticated:
+            chat_history = ChatHistory(
+                user_id=current_user.id,
+                user_question=user_input,
+                maked_text=response,
+                maked_image_url='',
+                type='text'
+            )
+            db.session.add(chat_history)
+            db.session.commit()
+            print("데이터베이스에 질문 저장 완료")
+        return jsonify({'response': response})
+    except Exception as e:
+        print(str(e))
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/get_chat/<int:history_id>', methods=['GET'])
+def get_chat(history_id):
+    if current_user.is_authenticated:
+        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
+        if chat_history:
+            history_data = {
+                'user_question': chat_history.user_question,
+                'maked_text': chat_history.maked_text
+            }
+            return jsonify(history_data), 200
+        else:
+            return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
+    return jsonify({'error': '인증되지 않았습니다.'}), 403
+

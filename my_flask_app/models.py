@@ -53,6 +53,7 @@ class ChatHistory(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     type = db.Column(db.String(20), nullable=False)
 
+    
     @classmethod
     def get_user_history(cls, user_id):
         """특정 사용자의 기록을 최신순으로 반환"""

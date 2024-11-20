@@ -72,61 +72,6 @@ def image_chat_page():
         print("Error fetching chat histories:", str(e))
         return render_template('chatbot/image_chatbot.html', chat_histories=[])
 
-@bp.route('/image', methods=['POST'])
-def image():
-    try:
-        model_id = os.getenv('IMAGE_MODEL_ID')
-        model = ImageChatModel(model_id=model_id)
-        user_input = request.json.get('message')
-        response = model.get_response(user_input)
-
-        save_folder = "./my_flask_app/static/images"
-        os.makedirs(save_folder, exist_ok=True)  # 폴더가 없을 때 생성
-
-        img_data = requests.get(response).content
-
-        # user_id 설정
-        if current_user.is_authenticated:
-            user_id = current_user.id
-        else:
-            user_id = 'guest'  # 비로그인 사용자를 위한 기본 ID
-
-        counter = 1
-        base_filename = f"{user_id}_{counter}.jpg"
-        file_path = os.path.join(save_folder, base_filename)
-
-        while os.path.exists(file_path):
-            counter += 1
-            file_path = os.path.join(save_folder, f"{user_id}_{counter}.jpg")
-
-        with open(file_path, 'wb') as handler:
-            handler.write(img_data)
-            print("이미지 저장 완료")
-
-        s3_client = boto3.client('s3', region_name='ap-northeast-2')  # S3 클라이언트 설정
-        s3_client.upload_file(file_path, MY_BUCKET_NAME, f'{user_id}_{counter}.jpg')
-
-        # S3에 저장한 이미지 URL 생성
-        image_url = f"https://{MY_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{user_id}_{counter}.jpg"
-
-        # 데이터베이스에 저장
-        if current_user.is_authenticated:
-            chat_history = ChatHistory(
-                user_id=user_id,
-                user_question=user_input,
-                maked_text='',
-                maked_image_url=image_url,
-                type='image'  # 이미지 타입 지정
-            )
-            db.session.add(chat_history)
-            db.session.commit()
-            print('DB 저장 완료')
-
-        return jsonify({'response': response})
-    
-    except Exception as e:
-        print(str(e))
-        return jsonify({'error': str(e)}), 500
 
 class ImageChatModel:
     def __init__(self, model_id):
@@ -187,3 +132,60 @@ class ImageChatModel:
 
     def is_image_result(self, message):
         return isinstance(message, HumanMessage) and message.content.startswith('https://')
+
+model_id = os.getenv('IMAGE_MODEL_ID')
+model = ImageChatModel(model_id=model_id)
+        
+@bp.route('/image', methods=['POST'])
+def image():
+    try:
+        user_input = request.json.get('message')
+        response = model.get_response(user_input)
+
+        save_folder = "./my_flask_app/static/images"
+        os.makedirs(save_folder, exist_ok=True)  # 폴더가 없을 때 생성
+
+        img_data = requests.get(response).content
+
+        # user_id 설정
+        if current_user.is_authenticated:
+            user_id = current_user.id
+        else:
+            user_id = 'guest'  # 비로그인 사용자를 위한 기본 ID
+
+        counter = 1
+        base_filename = f"{user_id}_{counter}.jpg"
+        file_path = os.path.join(save_folder, base_filename)
+
+        while os.path.exists(file_path):
+            counter += 1
+            file_path = os.path.join(save_folder, f"{user_id}_{counter}.jpg")
+
+        with open(file_path, 'wb') as handler:
+            handler.write(img_data)
+            print("이미지 저장 완료")
+
+        s3_client = boto3.client('s3', region_name='ap-northeast-2')  # S3 클라이언트 설정
+        s3_client.upload_file(file_path, MY_BUCKET_NAME, f'{user_id}_{counter}.jpg')
+
+        # S3에 저장한 이미지 URL 생성
+        image_url = f"https://{MY_BUCKET_NAME}.s3.ap-northeast-2.amazonaws.com/{user_id}_{counter}.jpg"
+
+        # 데이터베이스에 저장
+        if current_user.is_authenticated:
+            chat_history = ChatHistory(
+                user_id=user_id,
+                user_question=user_input,
+                maked_text='',
+                maked_image_url=image_url,
+                type='image'  # 이미지 타입 지정
+            )
+            db.session.add(chat_history)
+            db.session.commit()
+            print('DB 저장 완료')
+
+        return jsonify({'response': response})
+    
+    except Exception as e:
+        print(str(e))
+        return jsonify({'error': str(e)}), 500

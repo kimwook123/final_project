@@ -55,6 +55,7 @@
                 const imageElement = document.createElement('img');
                 imageElement.src = response.data.response;
                 imageElement.alt = 'Generated Image';
+                imageElement.style.width = '50%';
                 imageElement.className = 'chatbot-image';
                 botMessageDiv.appendChild(imageElement);
             } else {
