@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, url_for, request, render_template, g, flash, jsonify
+from flask import Blueprint, url_for, request, render_template, g, flash, jsonify, session
 from werkzeug.utils import redirect
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END, MessagesState
@@ -15,6 +15,7 @@ from my_flask_app.models import User, ChatHistory
 from flask_login import current_user
 import sqlite3
 from my_flask_app.utils import get_history
+import uuid
 
 load_dotenv()  # .env에 작성한 변수를 불러온다.
 
@@ -42,8 +43,9 @@ class ChatModel:
     def _call_model(self, state: MessagesState):
         return {'messages': self.chat_model_with_tools.invoke(state['messages'])}
 
-    def get_response(self, prompt: str):
+    def get_response(self, prompt: str, thread_id: str):
         try:
+            self.config['configurable']['thread_id'] = thread_id
             response = self.graph.invoke(
                 {'messages': prompt},
                 config=self.config
@@ -64,12 +66,13 @@ bp = Blueprint('chat', __name__, url_prefix='/chatbot')
 model_id = os.getenv('MODEL_ID')
 model = ChatModel(model_id=model_id)
 
-@bp.route('/delete_chat/<int:history_id>', methods=['DELETE'])
-def delete_chat(history_id):
+@bp.route('/delete_chat/<string:thread_id>', methods=['DELETE'])
+def delete_chat(thread_id):
     if current_user.is_authenticated:
-        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
-        if chat_history:
-            db.session.delete(chat_history)
+        chat_histories = ChatHistory.query.filter_by(thread_id=thread_id, user_id=current_user.id, type='text').all()
+        if chat_histories:
+            for history in chat_histories:
+                db.session.delete(history)
             db.session.commit()
             return jsonify({'success': True})
     return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
@@ -79,34 +82,46 @@ def get_text_history():
     if current_user.is_authenticated:
         chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
         print(f"Fetched {len(chat_histories)} chat histories from DB")
-        for history in chat_histories:
-            print(f"History ID: {history.id}, Question: {history.user_question}")
     else:
         chat_histories = []
     return jsonify({
         'chat_histories': [
-            {'id': history.id, 'user_question': history.user_question}
+            {'thread_id': history.thread_id, 'user_question': history.user_question}
             for history in chat_histories
         ]
     })
 
 @bp.route('/chat', methods=['GET'])
 def chat_page():
-    if current_user.is_authenticated:
-        chat_histories = ChatHistory.query.filter_by(user_id=current_user.id, type='text').order_by(ChatHistory.created_at.desc()).all()
-    else:
-        chat_histories = []
-    return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories)
+    try:
+        thread_id = request.args.get('thread_id')
+        if thread_id:
+            # 특정 thread_id의 대화 불러오기
+            chat_histories = ChatHistory.query.filter_by(thread_id=thread_id, type='text').order_by(ChatHistory.created_at.asc()).all()
+            if not chat_histories:
+                flash('해당 대화 기록을 찾을 수 없습니다.', 'error')
+                chat_histories = []
+        else:
+            # 새로운 대화 시작 시 새로운 thread_id 생성
+            thread_id = str(uuid.uuid4())
+            chat_histories = []
+        return render_template('chatbot/text_chatbot.html', chat_histories=chat_histories, thread_id=thread_id)
+    except Exception as e:
+        print("Error fetching chat histories:", str(e))
+        return render_template('chatbot/text_chatbot.html', chat_histories=[], thread_id=str(uuid.uuid4()))
 
 @bp.route('/chat', methods=['POST'])
 def chat():
     try:
         user_input = request.json.get('message')
-        print("Current User:", current_user)
-        print("Is Authenticated:", current_user.is_authenticated)
-        response = model.get_response(user_input)
+        thread_id = request.json.get('thread_id')
+        if not thread_id:
+            thread_id = str(uuid.uuid4())
+
+        response = model.get_response(user_input, thread_id)
         if current_user.is_authenticated:
             chat_history = ChatHistory(
+                thread_id=thread_id,
                 user_id=current_user.id,
                 user_question=user_input,
                 maked_text=response,
@@ -116,22 +131,27 @@ def chat():
             db.session.add(chat_history)
             db.session.commit()
             print("데이터베이스에 질문 저장 완료")
-        return jsonify({'response': response})
+        return jsonify({'response': response, 'thread_id': thread_id})
     except Exception as e:
         print(str(e))
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/get_chat/<int:history_id>', methods=['GET'])
-def get_chat(history_id):
+@bp.route('/get_chat/<string:thread_id>', methods=['GET'])
+def get_chat(thread_id):
     if current_user.is_authenticated:
-        chat_history = ChatHistory.query.filter_by(id=history_id, user_id=current_user.id).first()
-        if chat_history:
+        chat_histories = ChatHistory.query.filter_by(thread_id=thread_id, user_id=current_user.id, type='text').order_by(ChatHistory.created_at.asc()).all()
+        if chat_histories:
             history_data = {
-                'user_question': chat_history.user_question,
-                'maked_text': chat_history.maked_text
+                'thread_id': thread_id,
+                'chat_history': [
+                    {
+                        'user_question': history.user_question,
+                        'maked_text': history.maked_text,
+                        'created_at': history.created_at
+                    } for history in chat_histories
+                ]
             }
             return jsonify(history_data), 200
         else:
             return jsonify({'error': '기록을 찾을 수 없습니다.'}), 404
     return jsonify({'error': '인증되지 않았습니다.'}), 403
-

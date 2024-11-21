@@ -1,3 +1,4 @@
+import uuid
 from my_flask_app import db
 from flask_login import UserMixin
 from datetime import datetime
@@ -46,15 +47,15 @@ class User(db.Model, UserMixin):
 class ChatHistory(db.Model):
     __tablename__ = 'chat_history'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    thread_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     user_question = db.Column(db.Text, nullable=True)
     maked_text = db.Column(db.Text, nullable=False)
     maked_image_url = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     type = db.Column(db.String(20), nullable=False)
-
     
     @classmethod
-    def get_user_history(cls, user_id):
-        """특정 사용자의 기록을 최신순으로 반환"""
-        return cls.query.filter_by(user_id=user_id).order_by(cls.created_at.desc()).all()
+    def get_user_history(cls, user_id, chatbot_type):
+        """특정 사용자의 특정 챗봇 타입의 기록을 최신순으로 반환"""
+        return cls.query.filter_by(user_id=user_id, type=chatbot_type).order_by(cls.created_at.desc()).all()

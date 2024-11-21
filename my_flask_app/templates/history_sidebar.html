@@ -13,10 +13,10 @@
                     {% if chat_histories %}
                         {% for history in chat_histories %}
                             <li class="nav-item d-flex justify-content-between align-items-center">
-                                <a href="#" class="nav-link chat-history-link" data-id="{{ history.id }}" onclick="loadChatHistory(this.dataset.id)">
+                                <a href="#" class="nav-link chat-history-link" data-id="{{ history.thread_id }}" onclick="loadChatHistory('{{ history.thread_id }}', '{{ request.path.split('/')[1] }}')">
                                     {{ history.user_question[:20] }}...
                                 </a>
-                                <button class="btn btn-danger btn-sm delete-button" data-id="{{ history.id }}" onclick="deleteChatHistory(this.dataset.id)">삭제</button>
+                                <button class="btn btn-danger btn-sm delete-button" data-id="{{ history.thread_id }}" onclick="deleteChatHistory('{{ history.thread_id }}')">삭제</button>
                             </li>
                         {% endfor %}
                     {% else %}
@@ -40,14 +40,25 @@
 
 {% block script %}
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="{{ url_for('static', filename='js/shared.js') }}"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        async function deleteChatHistory(historyId) {
+        async function deleteChatHistory(threadId) {
             try {
-                const response = await axios.delete(`/chatbot/delete_chat/${historyId}`);
+                // 현재 페이지 URL을 기반으로 챗봇 타입 결정
+                const currentPath = window.location.pathname;
+                let chatbotType = '';
+                if (currentPath.includes('/chatbot')) {
+                    chatbotType = 'chatbot';
+                } else if (currentPath.includes('/imagebot')) {
+                    chatbotType = 'imagebot';
+                }
+
+                const deleteUrl = `/${chatbotType}/delete_chat/${threadId}`;
+                const response = await axios.delete(deleteUrl);
                 if (response.status === 200) {
-                    console.log('채팅 기록 삭제 완료:', historyId);
-                    await updateSidebar();
+                    console.log('채팅 기록 삭제 완료:', threadId);
+                    await updateSidebar(`/${chatbotType}/get_history`, (historyId) => loadChatHistory(historyId, `/${chatbotType}`));
                 } else {
                     console.error('채팅 기록 삭제 실패:', response.data);
                 }
@@ -55,66 +66,28 @@
                 console.error('채팅 기록 삭제 오류:', error);
             }
         }
-        async function updateSidebar() {
-            try {
-                const response = await axios.get('/chatbot/get_history');
-                const sidebar = document.getElementById('chatHistoryList');
-                sidebar.innerHTML = '';
-                if (response.data.chat_histories.length === 0) {
-                    console.log("No chat histories to display.");
+
+        // NEW CHAT 버튼 기능 추가
+        const newChatButton = document.getElementById('newChatButton');
+        if (newChatButton) {
+            newChatButton.addEventListener('click', function() {
+                // 현재 페이지의 chatbot type을 확인하고 새로고침하여 새로운 thread_id 생성
+                const currentPath = window.location.pathname;
+                if (currentPath.includes('/chatbot')) {
+                    window.location.href = '/chatbot/chat';
+                } else if (currentPath.includes('/imagebot')) {
+                    window.location.href = '/imagebot/image';
                 }
-                response.data.chat_histories.forEach(history => {
-                    const li = document.createElement('li');
-                    li.className = 'nav-item d-flex justify-content-between align-items-center';
-                    const link = document.createElement('a');
-                    link.className = 'nav-link chat-history-link';
-                    link.href = '#';
-                    link.textContent = history.user_question.slice(0, 20) + '...';
-                    link.dataset.id = history.id;
-                    link.addEventListener('click', () => loadChatHistory(history.id));
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn btn-danger btn-sm delete-button';
-                    deleteBtn.dataset.id = history.id;
-                    deleteBtn.textContent = '삭제';
-                    deleteBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        deleteChatHistory(history.id);
-                    });
-                    li.appendChild(link);
-                    li.appendChild(deleteBtn);
-                    sidebar.appendChild(li);
-                });
-            } catch (error) {
-                console.error('사이드바 업데이트 오류:', error);
-            }
+            });
         }
-        async function loadChatHistory(historyId) {
-            try {
-                const response = await axios.get(`/chatbot/get_chat/${historyId}`);
-                if (response.status === 200) {
-                    const chatContentDiv = document.getElementById('chatContent');
-                    chatContentDiv.innerHTML = '';
-                    const userMessageDiv = document.createElement('div');
-                    userMessageDiv.className = 'message user-message';
-                    userMessageDiv.textContent = response.data.user_question;
-                    chatContentDiv.appendChild(userMessageDiv);
-                    if (response.data.maked_text) {
-                        const botMessageDiv = document.createElement('div');
-                        botMessageDiv.className = 'message bot-message';
-                        botMessageDiv.textContent = response.data.maked_text;
-                        chatContentDiv.appendChild(botMessageDiv);
-                    }
-                    document.getElementById('chatContent').scrollTop = chatContentDiv.scrollHeight;
-                } else {
-                    console.error('기록을 찾을 수 없습니다:', response.data);
-                }
-            } catch (error) {
-                console.error('채팅 기록 불러오기 오류:', error);
-                const chatContentDiv = document.getElementById('chatContent');
-                chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
-            }
+
+        // 현재 URL을 기반으로 챗봇 타입을 결정하고 사이드바를 업데이트
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/chatbot')) {
+            updateSidebar('/chatbot/get_history', (threadId) => loadChatHistory(threadId, '/chatbot'));
+        } else if (currentPath.includes('/imagebot')) {
+            updateSidebar('/imagebot/get_history', (threadId) => loadChatHistory(threadId, '/imagebot'));
         }
-        updateSidebar();
     });
 </script>
 {% endblock %}

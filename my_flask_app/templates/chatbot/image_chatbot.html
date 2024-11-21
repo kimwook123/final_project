@@ -10,10 +10,21 @@
         <h2 class="text-center w-100">이미지 챗봇과의 대화</h2>
     </div>
     <div class="chat-container" id="chatContainer" style="height: 60vh; overflow-y: auto;">
-        <!-- 채팅 메시지 표시 -->
+        {% for history in chat_histories %}
+            <div class="message image-user-message">{{ history.user_question }}</div>
+            {% if history.maked_text %}
+                <div class="message image-bot-message">{{ history.maked_text }}</div>
+            {% endif %}
+            {% if history.maked_image_url %}
+                <div class="message image-bot-message">
+                    <img src="{{ history.maked_image_url }}" alt="Generated Image" class="chatbot-image" style="width:50%; height:auto;">
+                </div>
+            {% endif %}
+        {% endfor %}
     </div>
     <div class="input-group mt-3">
         <input type="text" class="form-control" id="userInput" placeholder="이미지 요청 메시지를 입력하세요.">
+        <input type="hidden" id="threadId" value="{{ thread_id }}">
         <div class="input-group-append">
             <button class="btn btn-primary" id="sendButton">전송</button>
         </div>
@@ -36,72 +47,119 @@
                 sendMessage();
             }
         });
+
+        // 페이지 로드 시 URL의 thread_id 값을 사용하여 대화 기록 로드
+        const urlParams = new URLSearchParams(window.location.search);
+        const threadId = urlParams.get('thread_id');
+        if (threadId) {
+            loadChatHistory(threadId, baseUrl);
+        }
+
+        // 페이지 로드 시 사이드바 업데이트
         updateSidebar('/imagebot/get_history', (historyId) => loadChatHistory(historyId, '/imagebot'));
     });
+
     async function sendMessage() {
         const userInput = document.getElementById('userInput').value;
+        const threadId = document.getElementById('threadId').value;  // 현재 thread_id 값 가져오기
         if (!userInput) return;
+
+        // 사용자 메시지 추가
         const userMessageDiv = document.createElement('div');
         userMessageDiv.className = 'message image-user-message';
         userMessageDiv.textContent = userInput;
         document.getElementById('chatContainer').appendChild(userMessageDiv);
         document.getElementById('userInput').value = '';
         document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
+
         try {
-            const response = await axios.post('/imagebot/image', { message: userInput });
+            // thread_id와 함께 서버로 요청 보내기
+            const response = await axios.post('/imagebot/image', {
+                message: userInput,
+                thread_id: threadId  // 기존 thread_id 사용
+            });
+
+            // 봇의 응답 추가
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message image-bot-message';
             if (response.data.response.startsWith('http')) {
                 const imageElement = document.createElement('img');
                 imageElement.src = response.data.response;
                 imageElement.alt = 'Generated Image';
-                imageElement.style.width = '50%';
                 imageElement.className = 'chatbot-image';
+                imageElement.style.width = '50%';
+                imageElement.style.height = 'auto';
                 botMessageDiv.appendChild(imageElement);
             } else {
                 botMessageDiv.textContent = response.data.response;
             }
             document.getElementById('chatContainer').appendChild(botMessageDiv);
             document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
+
+            // thread_id 업데이트
+            document.getElementById('threadId').value = response.data.thread_id;
+
+            // 사이드바 업데이트
             await updateSidebar('/imagebot/get_history', (historyId) => loadChatHistory(historyId, '/imagebot'));
         } catch (error) {
             console.error('서버와의 통신 오류:', error);
             document.getElementById('userInput').setAttribute('placeholder', '오류 발생. 다시 시도해 주세요.');
         }
+
         document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
     }
+
     async function loadChatHistory(historyId, baseUrl) {
         try {
-            const response = await axios.get(`${baseUrl}/get_chat/${historyId}`);
-            const chatContentDiv = document.getElementById('chatContainer');
-            chatContentDiv.innerHTML = '';
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'message image-user-message';
-            userMessageDiv.textContent = response.data.user_question;
-            chatContentDiv.appendChild(userMessageDiv);
-            if (response.data.maked_text) {
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'message image-bot-message';
-                botMessageDiv.textContent = response.data.maked_text;
-                chatContentDiv.appendChild(botMessageDiv);
+            const getUrl = `${baseUrl}/get_chat/${historyId}`;
+            const response = await axios.get(getUrl);
+            if (response.status === 200) {
+                const chatContentDiv = document.getElementById('chatContainer');
+                chatContentDiv.innerHTML = ''; // 기존 내용을 지우고 새로 불러온 기록으로 대체
+
+                // 해당 thread_id를 설정합니다.
+                const threadIdInput = document.getElementById('threadId');
+                threadIdInput.value = response.data.thread_id;
+
+                // 기록된 메시지를 채팅창에 추가
+                response.data.chat_history.forEach(history => {
+                    if (history.user_question) {
+                        const userMessageDiv = document.createElement('div');
+                        userMessageDiv.className = 'message image-user-message';
+                        userMessageDiv.textContent = history.user_question;
+                        chatContentDiv.appendChild(userMessageDiv);
+                    }
+
+                    if (history.maked_text) {
+                        const botMessageDiv = document.createElement('div');
+                        botMessageDiv.className = 'message image-bot-message';
+                        botMessageDiv.textContent = history.maked_text;
+                        chatContentDiv.appendChild(botMessageDiv);
+                    }
+
+                    if (history.maked_image_url) {
+                        const botImageDiv = document.createElement('div');
+                        botImageDiv.className = 'message image-bot-message';
+                        const imageElement = document.createElement('img');
+                        imageElement.src = history.maked_image_url;
+                        imageElement.alt = 'Generated Image';
+                        imageElement.style.width = '50%';
+                        imageElement.style.height = 'auto';
+                        botImageDiv.appendChild(imageElement);
+                        chatContentDiv.appendChild(botImageDiv);
+                    }
+                });
+
+                document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
+            } else {
+                console.error('기록을 찾을 수 없습니다:', response.data);
             }
-            if (response.data.maked_image_url) {
-                const botImageDiv = document.createElement('div');
-                botImageDiv.className = 'message image-bot-message';
-                const imageElement = document.createElement('img');
-                imageElement.src = response.data.maked_image_url;
-                imageElement.alt = 'Generated Image';
-                imageElement.style.width = '50%';
-                imageElement.style.height = 'auto';
-                botImageDiv.appendChild(imageElement);
-                chatContentDiv.appendChild(botImageDiv);
-            }
-            document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
         } catch (error) {
             console.error('채팅 기록 불러오기 오류:', error);
             const chatContentDiv = document.getElementById('chatContainer');
             chatContentDiv.innerHTML = `<p>기록을 불러오는데 오류가 발생했습니다.</p>`;
         }
     }
+
 </script>
 {% endblock %}

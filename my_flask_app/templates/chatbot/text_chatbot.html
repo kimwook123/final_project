@@ -4,10 +4,16 @@
 <div class="container mt-5">
     <h2 class="text-center">챗봇과의 대화</h2>
     <div class="chat-container" id="chatContainer" style="height: 60vh; overflow-y: auto;">
-        <!-- 채팅 메시지 표시 -->
+        {% for history in chat_histories %}
+            <div class="message user-message">{{ history.user_question }}</div>
+            {% if history.maked_text %}
+                <div class="message bot-message">{{ history.maked_text }}</div>
+            {% endif %}
+        {% endfor %}
     </div>
     <div class="input-group mt-3">
         <input type="text" class="form-control" id="userInput" placeholder="메시지를 입력하세요.">
+        <input type="hidden" id="threadId" value="{{ thread_id }}">
         <div class="input-group-append">
             <button class="btn btn-primary" id="sendButton">전송</button>
         </div>
@@ -19,7 +25,6 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="{{ url_for('static', filename='js/shared.js') }}"></script>
 <script>
-    // 텍스트 챗봇의 기본 URL 설정
     const baseUrl = "/chatbot";
     
     document.addEventListener("DOMContentLoaded", function() {
@@ -32,21 +37,29 @@
         });
         updateSidebar('/chatbot/get_history', (historyId) => loadChatHistory(historyId, '/chatbot'));
     });
+
     async function sendMessage() {
         const userInput = document.getElementById('userInput').value;
+        const threadIdInput = document.getElementById('threadId');
+        let threadId = threadIdInput.value;
         if (!userInput) return;
+
         const userMessageDiv = document.createElement('div');
         userMessageDiv.className = 'message user-message';
         userMessageDiv.textContent = userInput;
         document.getElementById('chatContainer').appendChild(userMessageDiv);
         document.getElementById('userInput').value = '';
         document.getElementById('userInput').setAttribute('placeholder', '로딩 중...');
+
         try {
-            const response = await axios.post('/chatbot/chat', { message: userInput });
+            const response = await axios.post('/chatbot/chat', { message: userInput, thread_id: threadId });
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'message bot-message';
             botMessageDiv.textContent = response.data.response;
             document.getElementById('chatContainer').appendChild(botMessageDiv);
+            
+            // 업데이트된 thread_id 저장
+            threadIdInput.value = response.data.thread_id;
             document.getElementById('userInput').setAttribute('placeholder', '메시지를 입력하세요.');
             await updateSidebar('/chatbot/get_history', (historyId) => loadChatHistory(historyId, '/chatbot'));
         } catch (error) {
@@ -55,21 +68,29 @@
         }
         document.getElementById('chatContainer').scrollTop = document.getElementById('chatContainer').scrollHeight;
     }
-    async function loadChatHistory(historyId, baseUrl) {
+
+    async function loadChatHistory(threadId, baseUrl) {
         try {
-            const response = await axios.get(`${baseUrl}/get_chat/${historyId}`);
+            const response = await axios.get(`${baseUrl}/get_chat/${threadId}`);
             const chatContentDiv = document.getElementById('chatContainer');
             chatContentDiv.innerHTML = '';
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'message user-message';
-            userMessageDiv.textContent = response.data.user_question;
-            chatContentDiv.appendChild(userMessageDiv);
-            if (response.data.maked_text) {
-                const botMessageDiv = document.createElement('div');
-                botMessageDiv.className = 'message bot-message';
-                botMessageDiv.textContent = response.data.maked_text;
-                chatContentDiv.appendChild(botMessageDiv);
-            }
+            response.data.chat_history.forEach(history => {
+                if (history.user_question) {
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'message user-message';
+                    userDiv.textContent = history.user_question;
+                    chatContentDiv.appendChild(userDiv);
+                }
+                if (history.maked_text) {
+                    const botDiv = document.createElement('div');
+                    botDiv.className = 'message bot-message';
+                    botDiv.textContent = history.maked_text;
+                    chatContentDiv.appendChild(botDiv);
+                }
+            });
+
+            // thread_id 업데이트
+            document.getElementById('threadId').value = response.data.thread_id;
             document.getElementById('chatContainer').scrollTop = chatContentDiv.scrollHeight;
         } catch (error) {
             console.error('채팅 기록 불러오기 오류:', error);
